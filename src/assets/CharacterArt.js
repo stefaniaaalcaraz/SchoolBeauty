@@ -1,1 +1,52 @@
-/** Draws a uniformed student from original geometric Canvas shapes. */export function student(c,{x,y,scale=1,color=0,direction=1,gaze=0,blush=false,watch=false}){const palettes=[['#59434c','#f3c7aa','#d9869b','#66586e'],['#9b634b','#edbd9d','#7795a0','#514d64'],['#493f42','#c98f72','#9c7ca1','#544b61'],['#d2a25e','#f0c5a5','#80a18e','#66586e']],[hair,skin,top,skirt]=palettes[color%4];c.save();c.translate(x,y);c.scale(scale*direction,scale);c.fillStyle='#e4c7b6';c.beginPath();c.ellipse(0,-8,36,8,0,0,7);c.fill();c.fillStyle=skin;c.fillRect(-12,-61,9,55);c.fillRect(5,-61,9,55);c.fillStyle='#66525c';c.beginPath();c.ellipse(0,-5,22,6,0,0,7);c.fill();c.fillStyle=skirt;c.fillRect(-30,-110,60,48);c.fillStyle=top;c.beginPath();c.roundRect(-29,-181,58,77,14);c.fill();c.fillStyle=skin;c.fillRect(-36,-174,11,50);c.fillRect(25,-174,11,50);c.beginPath();c.ellipse(0,-217,35,42,0,0,7);c.fill();c.fillStyle=hair;c.beginPath();c.arc(0,-235,39,Math.PI,0);c.fill();c.fillRect(-37,-236,12,35);c.fillRect(25,-236,12,35);c.fillStyle='#473d45';c.beginPath();c.arc(-12+gaze*6,-217,3,0,7);c.arc(11+gaze*6,-217,3,0,7);c.fill();if(blush){c.fillStyle='#e9969c88';c.beginPath();c.ellipse(-22,-204,8,4,0,0,7);c.ellipse(22,-204,8,4,0,0,7);c.fill();}if(watch){c.strokeStyle=hair;c.lineWidth=2;c.beginPath();c.moveTo(-18,-228);c.lineTo(-7,-231);c.stroke();}c.restore();}
+/** Draws an original, softly shaded chibi student with expressive features. */
+export function student(ctx, { x, y, scale = 1, color = 0, direction = 1, gaze = 0, blush = false, watch = false }) {
+  const palettes = [
+    { hair: '#684657', skin: '#f7c9a8', shirt: '#f9f4eb', skirt: '#d97891', accent: '#e8ad62' },
+    { hair: '#8a553f', skin: '#f2bf9b', shirt: '#fff7ee', skirt: '#72a5a0', accent: '#dd9d58' },
+    { hair: '#493e56', skin: '#d99b7a', shirt: '#fff5e9', skirt: '#9b83b9', accent: '#eab567' },
+    { hair: '#d7a34f', skin: '#f4c8aa', shirt: '#fff7eb', skirt: '#7caa87', accent: '#e789a0' },
+  ];
+  const p = palettes[color % palettes.length];
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale * direction, scale);
+
+  // Soft floor shadow grounds the oversized, friendly schoolkid silhouette.
+  ctx.fillStyle = '#72514824';
+  ctx.beginPath(); ctx.ellipse(0, -5, 32, 7, 0, 0, Math.PI * 2); ctx.fill();
+  // Legs, socks, and rounded shoes.
+  ctx.fillStyle = p.skin;
+  rounded(ctx, -13, -75, 10, 48, 5); rounded(ctx, 3, -75, 10, 48, 5);
+  ctx.fillStyle = '#fff9ee'; rounded(ctx, -14, -40, 11, 18, 5); rounded(ctx, 3, -40, 11, 18, 5);
+  ctx.fillStyle = '#625267'; rounded(ctx, -19, -29, 19, 10, 5); rounded(ctx, 1, -29, 19, 10, 5);
+  // A-line skirt and softly shaded, collared uniform.
+  ctx.fillStyle = p.skirt; ctx.beginPath(); ctx.moveTo(-22, -105); ctx.lineTo(22, -105); ctx.lineTo(29, -70); ctx.quadraticCurveTo(0, -63, -29, -70); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#ffffff55'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-12, -101); ctx.lineTo(-16, -73); ctx.moveTo(0, -101); ctx.lineTo(0, -69); ctx.moveTo(12, -101); ctx.lineTo(16, -73); ctx.stroke();
+  const shirt = ctx.createLinearGradient(-27, -177, 27, -100); shirt.addColorStop(0, '#fffdf5'); shirt.addColorStop(1, p.shirt); ctx.fillStyle = shirt;
+  ctx.beginPath(); ctx.moveTo(-21, -174); ctx.quadraticCurveTo(-29, -175, -31, -162); ctx.lineTo(-27, -108); ctx.quadraticCurveTo(0, -99, 27, -108); ctx.lineTo(31, -162); ctx.quadraticCurveTo(29, -175, 21, -174); ctx.lineTo(13, -181); ctx.lineTo(-13, -181); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e8dfd4'; ctx.beginPath(); ctx.moveTo(-9, -176); ctx.lineTo(0, -164); ctx.lineTo(-3, -151); ctx.lineTo(-15, -172); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(9, -176); ctx.lineTo(0, -164); ctx.lineTo(3, -151); ctx.lineTo(15, -172); ctx.fill();
+  ctx.fillStyle = p.accent; ctx.beginPath(); ctx.moveTo(0, -163); ctx.lineTo(5, -155); ctx.lineTo(2, -137); ctx.lineTo(-2, -137); ctx.lineTo(-5, -155); ctx.closePath(); ctx.fill();
+  // Little hands emerge below the short sleeves.
+  ctx.fillStyle = p.skin; ctx.beginPath(); ctx.ellipse(-30, -132, 6, 9, -.1, 0, Math.PI * 2); ctx.ellipse(30, -132, 6, 9, .1, 0, Math.PI * 2); ctx.fill();
+  // Neck and large rounded face.
+  ctx.fillStyle = p.skin; rounded(ctx, -8, -194, 16, 20, 6);
+  ctx.beginPath(); ctx.ellipse(0, -215, 32, 37, 0, 0, Math.PI * 2); ctx.fill();
+  // Hair cap, side locks, and a few polished highlight strokes.
+  ctx.fillStyle = p.hair; ctx.beginPath(); ctx.moveTo(-31, -222); ctx.quadraticCurveTo(-37, -255, -7, -257); ctx.quadraticCurveTo(26, -267, 33, -239); ctx.lineTo(30, -214); ctx.quadraticCurveTo(17, -225, 11, -241); ctx.quadraticCurveTo(-4, -226, -29, -225); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = p.hair; ctx.beginPath(); ctx.ellipse(-28, -221, 7, 23, -.18, 0, Math.PI * 2); ctx.ellipse(28, -221, 7, 23, .18, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffffff35'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(-4, -242, 17, 3.8, 5.4); ctx.stroke();
+  // Bright eyes, tiny catchlights, brows, and rosy cheeks.
+  const eyeY = watch ? -219 : -216;
+  ctx.fillStyle = '#584653'; ctx.beginPath(); ctx.ellipse(-11 + gaze * 4, eyeY, 3.2, watch ? 1.2 : 4.1, 0, 0, Math.PI * 2); ctx.ellipse(11 + gaze * 4, eyeY, 3.2, watch ? 1.2 : 4.1, 0, 0, Math.PI * 2); ctx.fill();
+  if (!watch) { ctx.fillStyle = '#fffdf5'; ctx.beginPath(); ctx.arc(-12 + gaze * 4, eyeY - 1, 1.1, 0, Math.PI * 2); ctx.arc(10 + gaze * 4, eyeY - 1, 1.1, 0, Math.PI * 2); ctx.fill(); }
+  ctx.strokeStyle = p.hair; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-16, -225); ctx.quadraticCurveTo(-11, -229, -6, -225); ctx.moveTo(6, -225); ctx.quadraticCurveTo(11, -229, 16, -225); ctx.stroke();
+  ctx.fillStyle = '#e9889870'; ctx.beginPath(); ctx.ellipse(-20, -205, blush ? 7 : 5, 3.5, 0, 0, Math.PI * 2); ctx.ellipse(20, -205, blush ? 7 : 5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#a65f6c'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, -205, 4, .3, 2.8); ctx.stroke();
+  ctx.restore();
+}
+
+/** Adds a rounded shape without repeating path boilerplate. */
+function rounded(ctx, x, y, width, height, radius) {
+  ctx.beginPath(); ctx.roundRect(x, y, width, height, radius); ctx.fill();
+}

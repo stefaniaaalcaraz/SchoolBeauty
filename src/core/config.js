@@ -1,10 +1,11 @@
-/** Shared balance settings for round length, flirt pacing, and friend flow. */
+/** Balance settings for a full round and its classroom interactions. */
 export const CONFIG = Object.freeze({
-  seconds: 30,
-  max: 100,
-  charge: 58,
-  cool: 42,
-  points: 10,
-  spawn: 1.7,
-  minSpawn: 0.7,
+  seconds: 60,
+  maxEnergy: 100,
+  beamCostPerSecond: 9,
+  charmPerSecond: 34,
+  rivalPressurePerSecond: 18,
+  tapPower: 13,
+  heartEnergy: 22,
+  teacherPenalty: 24,
 });

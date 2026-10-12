@@ -1,31 +1,33 @@
-/** Normalizes pointer and keyboard gestures to a hold/release interface. */
+/** Normalizes mouse, touch, and keyboard into move, beam, and tap events. */
 export class InputController {
   constructor(canvas, handlers) {
     this.canvas = canvas;
     this.handlers = handlers;
 
+    canvas.addEventListener('pointermove', (event) => this.move(event));
     canvas.addEventListener('pointerdown', (event) => {
       canvas.setPointerCapture?.(event.pointerId);
       this.move(event);
-      handlers.onStart();
+      handlers.onPulse();
+      handlers.onBeamStart();
     });
-    canvas.addEventListener('pointermove', (event) => this.move(event));
-    canvas.addEventListener('pointerup', () => handlers.onStop());
-    canvas.addEventListener('pointercancel', () => handlers.onStop());
+    canvas.addEventListener('pointerup', () => handlers.onBeamStop());
+    canvas.addEventListener('pointercancel', () => handlers.onBeamStop());
 
     window.addEventListener('keydown', (event) => {
       if (event.code === 'Space' && !event.repeat) {
         event.preventDefault();
-        handlers.onStart();
+        handlers.onPulse();
+        handlers.onBeamStart();
       }
     });
     window.addEventListener('keyup', (event) => {
-      if (event.code === 'Space') handlers.onStop();
+      if (event.code === 'Space') handlers.onBeamStop();
     });
-    window.addEventListener('blur', () => handlers.onStop());
+    window.addEventListener('blur', () => handlers.onBeamStop());
   }
 
-  /** Sends pointer coordinates relative to the canvas to the game scene. */
+  /** Sends normalized pointer coordinates to player movement and target aim. */
   move(event) {
     const bounds = this.canvas.getBoundingClientRect();
     this.handlers.onMove({

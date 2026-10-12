@@ -15,8 +15,9 @@ export class Game {
     this.lastFrameTime = 0;
 
     this.input = new InputController(canvas, {
-      onStart: () => this.scene.setFlirting(true),
-      onStop: () => this.scene.setFlirting(false),
+      onBeamStart: () => this.scene.setBeam(true),
+      onBeamStop: () => this.scene.setBeam(false),
+      onPulse: () => this.scene.pulse(),
       onMove: (point) => this.scene.setPointer(point),
     });
 
@@ -34,14 +35,18 @@ export class Game {
     });
 
     this.scene.on('score', (score) => this.updateScore(score));
-    this.scene.on('meter', (meter) => {
-      document.querySelector('#meter').style.width = meter + '%';
+    this.scene.on('energy', (energy) => {
+      document.querySelector('#meter').style.width = energy + '%';
+      document.querySelector('#energy-value').textContent = Math.ceil(energy) + '%';
     });
+    this.scene.on('hearts', (hearts) => { document.querySelector('#score').textContent = String(hearts).padStart(2, '0'); });
+    this.scene.on('followers', (count) => { document.querySelector('#followers').textContent = String(count); });
     this.scene.on('tick', (seconds) => {
       document.querySelector('#timer').textContent = String(seconds).padStart(2, '0');
     });
     this.scene.on('note', () => this.audio.playNote());
     this.scene.on('caught', () => this.audio.playWarning());
+    this.scene.on('win-duel', () => this.audio.playNote());
     this.scene.on('end', (score) => this.showResults(score));
   }
 
@@ -82,18 +87,17 @@ export class Game {
 
   /** Updates the score display and persists the best result on this device. */
   updateScore(score) {
-    document.querySelector('#score').textContent = String(score).padStart(3, '0');
     const best = Math.max(score, Number(localStorage.getItem('best') || 0));
     localStorage.setItem('best', String(best));
     document.querySelector('#best').textContent = String(best).padStart(3, '0');
   }
 
-  /** Shows score-aware feedback after the passing period ends. */
+  /** Shows heart and friendship feedback when the passing period ends. */
   showResults(score) {
-    document.querySelector('#final').textContent = String(score);
+    document.querySelector('#final').textContent = String(this.scene.hearts);
     document.querySelector('#result-title').textContent =
-      score >= 80 ? 'They noticed you!' : score >= 30 ? 'Cute work!' : 'There’s always tomorrow!';
-    document.querySelector('#result-copy').textContent = 'The bell rang, but you made it count.';
+      this.scene.hearts >= 8 ? 'They noticed you!' : this.scene.hearts >= 3 ? 'Cute work!' : 'There’s always tomorrow!';
+    document.querySelector('#result-copy').textContent = `You collected ${this.scene.hearts} hearts and made ${this.scene.boys.filter((boy) => boy.state === 'follower').length} new friends.`;
     document.querySelector('#result').classList.remove('hidden');
   }
 }

@@ -1,79 +1,64 @@
 import { hallway } from '../assets/HallwayArt.js';
 import { student } from '../assets/CharacterArt.js';
 
-/** Converts scene state into Canvas artwork without owning game rules. */
+/** Renders the school world and its actors independently from game rules. */
 export class HallwayRenderer {
-  constructor() {
-    this.width = 960;
-    this.height = 600;
-    this.time = 0;
-  }
+  constructor() { this.width = 960; this.height = 600; this.time = 0; }
 
-  /** Stores the current responsive viewport in CSS pixels. */
-  resize(width, height) {
-    this.width = width;
-    this.height = height;
-  }
+  /** Stores the responsive canvas size in CSS pixels. */
+  resize(width, height) { this.width = width; this.height = height; }
 
-  /** Draws the art, passing students, reactions, and the flirt prompt. */
-  draw(context, scene) {
+  /** Draws background, beam, classmates, hazards, pickups, and particles. */
+  draw(ctx, scene) {
     this.time += 1 / 60;
-    context.save();
-    context.scale(this.width / 960, this.height / 600);
-    hallway(context, this.time);
-
-    for (const friend of scene.friends) this.drawFriend(context, friend);
-    student(context, {
-      x: 690, y: 570, scale: 1, color: 0, direction: -1,
-      gaze: scene.crush.gaze, blush: scene.flirting,
-    });
-    for (const particle of scene.effects.items) this.drawParticle(context, particle);
-    if (scene.flirting) this.drawPrompt(context);
-    context.restore();
-  }
-
-  /** Draws a student crossing the hall and their suspicion bubble. */
-  drawFriend(context, friend) {
-    const position = friend.position(960);
-    const fade = Math.max(0, Math.min(1, friend.age * 2, (friend.duration - friend.age) * 2));
-    context.globalAlpha = fade;
-    student(context, {
-      x: position.x, y: 510, scale: 0.73, color: friend.variant,
-      direction: position.direction, gaze: friend.watching ? 0.55 : 0,
-      watch: friend.watching,
-    });
-    context.globalAlpha = 1;
-
-    if (friend.visible && friend.watching) {
-      context.fillStyle = '#fff';
-      context.beginPath();
-      context.roundRect(position.x - 22, 344, 44, 26, 12);
-      context.fill();
-      context.fillStyle = '#bf718d';
-      context.font = 'bold 14px sans-serif';
-      context.textAlign = 'center';
-      context.fillText('?!', position.x, 362);
+    ctx.save();
+    ctx.scale(this.width / 960, this.height / 600);
+    hallway(ctx, this.time);
+    for (const teacher of scene.teachers) this.drawActor(ctx, teacher, 2, 1.03);
+    for (const rival of scene.rivals) if (!rival.retreating) this.drawActor(ctx, rival, 1, 0.9);
+    for (const boy of scene.boys) {
+      if (boy.state === 'collected') continue;
+      this.drawActor(ctx, boy, boy.variant, boy.state === 'follower' ? 0.78 : 0.88);
+      if (boy.charm > 0) this.progress(ctx, boy.x, boy.y - 222, boy.charm, '#ef7fa5');
+      if (scene.duel?.target === boy) this.progress(ctx, boy.x, boy.y - 244, boy.duel, '#d68dc2');
     }
+    for (const heart of scene.pickups) this.drawHeart(ctx, heart);
+    const target = scene.nearestBoy();
+    if (scene.beam && target) this.drawBeam(ctx, scene.player.x, scene.player.y - 195, target.x, target.y - 194, scene.duel);
+    this.drawActor(ctx, scene.player, 3, 1);
+    for (const particle of scene.effects.items) this.drawParticle(ctx, particle);
+    ctx.restore();
   }
 
-  /** Fades each reward or warning symbol over its lifetime. */
-  drawParticle(context, particle) {
-    context.globalAlpha = 1 - particle.age / particle.life;
-    context.fillStyle = particle.glyph === '♥' ? '#df7395' : '#9c688a';
-    context.font = 'bold ' + particle.size + 'px sans-serif';
-    context.fillText(particle.glyph, particle.x, particle.y);
-    context.globalAlpha = 1;
+  /** Draws a cast member and a small shadow at their floor position. */
+  drawActor(ctx, actor, variant, scale) {
+    ctx.fillStyle = '#705a5638'; ctx.beginPath(); ctx.ellipse(actor.x, actor.y - 4, 31 * scale, 8 * scale, 0, 0, Math.PI * 2); ctx.fill();
+    student(ctx, { x: actor.x, y: actor.y, scale, color: variant, direction: actor.facing || 1,
+      gaze: 0.3, blush: actor.state === 'follower', watch: actor.pressure > 0 });
   }
 
-  /** Displays a speech cue while the player holds the flirt action. */
-  drawPrompt(context) {
-    context.fillStyle = '#fff';
-    context.beginPath();
-    context.roundRect(630, 202, 116, 31, 14);
-    context.fill();
-    context.fillStyle = '#bf708a';
-    context.font = 'bold 11px sans-serif';
-    context.textAlign = 'center';
-    context.fillText('♡ hi, cutie!', 688, 222);
+  /** Paints a soft line connecting the player with the active crush. */
+  drawBeam(ctx, x1, y1, x2, y2, duel) {
+    ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = duel ? '#e68db5aa' : '#f28bab99'; ctx.lineWidth = duel ? 14 : 10;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo((x1 + x2) / 2, Math.min(y1, y2) - 50, x2, y2); ctx.stroke();
+    ctx.strokeStyle = '#fff4d9'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+  }
+
+  /** Shows charm/duel progress in a compact rounded bar. */
+  progress(ctx, x, y, value, color) {
+    ctx.fillStyle = '#fff9ed'; ctx.beginPath(); ctx.roundRect(x - 29, y, 58, 8, 4); ctx.fill();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x - 27, y + 2, 54 * Math.min(1, value / 100), 4, 2); ctx.fill();
+  }
+
+  /** Paints a collectible heart with a friendly glow. */
+  drawHeart(ctx, heart) {
+    ctx.save(); ctx.shadowColor = '#e7769c'; ctx.shadowBlur = 16; ctx.fillStyle = '#e7769c';
+    ctx.font = 'bold 30px Georgia'; ctx.textAlign = 'center'; ctx.fillText('♥', heart.x, heart.y + Math.sin(heart.age * 4) * 4); ctx.restore();
+  }
+
+  /** Fades a floating reward or reaction glyph as it rises away. */
+  drawParticle(ctx, particle) {
+    ctx.globalAlpha = Math.max(0, 1 - particle.age / particle.life);
+    ctx.fillStyle = '#db7696'; ctx.font = 'bold ' + particle.size + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(particle.glyph, particle.x, particle.y); ctx.globalAlpha = 1;
   }
 }
