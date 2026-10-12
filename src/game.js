@@ -1,11 +1,11 @@
-import { InputManager } from './input.js?v=4';
-import { Renderer } from './renderer.js?v=4';
-import { Camera } from './camera.js?v=4';
-import { MenuState } from './states/menu.js?v=4';
-import { TutorialState } from './states/tutorial.js?v=4';
-import { LevelStartState } from './states/levelStart.js?v=4';
-import { PlayingState } from './states/playing.js?v=4';
-import { GameOverState } from './states/gameOver.js?v=4';
+import { InputManager } from './input.js?v=5';
+import { Renderer } from './renderer.js?v=5';
+import { Camera } from './camera.js?v=5';
+import { MenuState } from './states/menu.js?v=5';
+import { TutorialState } from './states/tutorial.js?v=5';
+import { LevelStartState } from './states/levelStart.js?v=5';
+import { PlayingState } from './states/playing.js?v=5';
+import { GameOverState } from './states/gameOver.js?v=5';
 
 export const GAME_WIDTH = 1920;
 export const GAME_HEIGHT = 1080;
@@ -19,7 +19,10 @@ export class Game {
     this.input = new InputManager(canvas);
     this.camera = new Camera(GAME_WIDTH, GAME_HEIGHT);
     this.settings = { music: true, sfx: true };
-    this.progress = { playerX: 220, score: 0, timeLeft: 60 };
+    this.progress = { playerX: 960, score: 0, timeLeft: 60 };
+    this.level = 1;
+    this.protagonist = null;
+    this.maleStudents = [];
     this.states = {
       [StateId.MENU]: new MenuState(this),
       [StateId.TUTORIAL]: new TutorialState(this),

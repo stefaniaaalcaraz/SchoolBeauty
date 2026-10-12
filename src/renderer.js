@@ -1,4 +1,4 @@
-import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=4';
+import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=5';
 
 const C = { ink: '#342b39', muted: '#786b78', pink: '#e76c91', coral: '#ef8e7e', cream: '#fff7ee', paper: '#fffdfa', lilac: '#a698c9', mint: '#add8c4', sky: '#cce8ed', darkPink: '#bd4c76' };
 
@@ -101,14 +101,67 @@ export class Renderer {
   drawEntities(game) {
     const c = this.ctx;
     if (game.currentStateId === StateId.PLAYING) {
-      this.drawCharacter(c, game.progress.playerX - game.camera.x, 818, '#e76c91', true);
-      for (let i = 0; i < 5; i++) this.drawCharacter(c, 750 + i * 290 - game.camera.x, 818, i % 2 ? '#809bc4' : '#eab27f', false);
+      const cameraX = game.camera.x;
+      // Students and followers share the middle layer; the protagonist is drawn last.
+      for (const student of game.maleStudents) this.drawStudent(c, student, cameraX, game);
+      this.drawProtagonist(c, game.protagonist, cameraX);
       return;
     }
     if ([StateId.MENU, StateId.LEVEL_START].includes(game.currentStateId)) {
       this.drawCharacter(c, 650, 800, '#e76c91', true);
       this.drawCharacter(c, 1290, 800, '#809bc4', false);
     }
+  }
+  drawStudent(c, student, cameraX, game) {
+    const screenX = student.x - cameraX;
+    const footY = floorYToScreen(student.y);
+    const centerY = footY - 35;
+    if (screenX < -110 || screenX > GAME_WIDTH + 110) return;
+    c.save();
+    // The reticle responds to player proximity or pointer/touch hover.
+    const pointer = game.input.pointer;
+    const nearPlayer = Math.hypot(student.x - game.protagonist.x, student.y - game.protagonist.y) <= 80;
+    const nearPointer = Math.hypot(pointer.x - screenX, pointer.y - centerY) <= 80;
+    if (!student.conquered && (nearPlayer || nearPointer)) {
+      c.strokeStyle = '#fff'; c.lineWidth = 4; c.setLineDash([8, 6]);
+      c.beginPath(); c.arc(screenX, centerY, 43, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
+      c.strokeStyle = '#e76c91'; c.lineWidth = 2; c.beginPath(); c.arc(screenX, centerY, 47, 0, Math.PI * 2); c.stroke();
+    }
+    c.fillStyle = 'rgba(67,57,70,.20)'; c.beginPath(); c.ellipse(screenX, footY + 4, 27, 7, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = student.color; c.fillRect(screenX - 25, footY - 70, 50, 70);
+    c.strokeStyle = student.conquered ? '#d77b91' : '#66586b'; c.lineWidth = 3; c.strokeRect(screenX - 25, footY - 70, 50, 70);
+    // A tiny profile detail keeps the color-block placeholder readable as a student.
+    c.fillStyle = '#fff3e8'; c.beginPath(); c.arc(screenX + 9, footY - 52, 9, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#49394b'; c.beginPath(); c.arc(screenX + 12, footY - 53, 2.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#554759'; c.fillRect(screenX - 25, footY - 13, 50, 13);
+    if (!student.conquered) {
+      this.text(c, '★'.repeat(student.starLevel), screenX, footY - 78, 13, '#8b5071', 900, 'center');
+      c.fillStyle = '#CCCCCC'; c.fillRect(screenX - 50, footY - 96, 100, 10);
+      c.fillStyle = '#4A90E2'; c.fillRect(screenX - 50, footY - 96, 100 * student.progress, 10);
+      c.strokeStyle = '#fff'; c.lineWidth = 1; c.strokeRect(screenX - 50, footY - 96, 100, 10);
+    } else {
+      this.text(c, '♡', screenX, footY - 79, 20, '#e76c91', 900, 'center');
+    }
+    if (student.floatingTimer > 0) {
+      const elapsed = 0.8 - student.floatingTimer;
+      c.globalAlpha = Math.min(1, student.floatingTimer * 2);
+      this.text(c, '+1', screenX, footY - 108 - elapsed * 38, 24, '#fff', 900, 'center', 1);
+    }
+    c.restore();
+  }
+  drawProtagonist(c, player, cameraX) {
+    if (!player) return;
+    const screenX = player.x - cameraX;
+    const footY = floorYToScreen(player.y);
+    const bob = player.state === 'Walk' ? Math.sin(player.animationTime * 12) * 2 : player.state === 'Run' ? Math.sin(player.animationTime * 20) * 3 : 0;
+    const flashing = player.state === 'Stunned' && Math.floor(player.animationTime * 10) % 2 === 0;
+    c.save();
+    c.fillStyle = 'rgba(67,57,70,.24)'; c.beginPath(); c.ellipse(screenX, footY + 5, 34, 9, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = flashing ? '#ef5350' : '#C7CEEA';
+    c.fillRect(screenX - 30, footY - 80 + bob, 60, 80);
+    c.strokeStyle = '#514b68'; c.lineWidth = 3; c.strokeRect(screenX - 30, footY - 80 + bob, 60, 80);
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(screenX + player.facing * 12, footY - 58 + bob, 5, 0, Math.PI * 2); c.fill();
+    c.restore();
   }
   drawCharacter(c, x, y, outfit, heroine) {
     if (x < -100 || x > GAME_WIDTH + 100) return;
@@ -208,6 +261,8 @@ export class Renderer {
     this.dim(c); this.panel(c, 520, 210, 880, 665, "TODAY'S PLAN");
     this.text(c, 'Fresh start, full heart.', 960, 333, 40, C.ink, 900, 'center', 0, 'Nunito');
     this.text(c, 'FIRST PERIOD • MONDAY MORNING', 960, 379, 16, C.darkPink, 800, 'center');
+    const level = ui.level || 1;
+    this.text(c, `LEVEL ${String(level).padStart(2, '0')} / 05  •  ${['3 × 1★  +  2 × 2★', '2 × 1★  +  2 × 2★  +  1 × 3★', '1 × 1★  +  2 × 2★  +  1 × 3★  +  1 × 4★', '1 × 1★  +  1 × 2★  +  1 × 3★  +  2 × 4★', '1 × 2★  +  1 × 3★  +  1 × 4★  +  2 × 5★'][level - 1]}`, 960, 433, 18, C.ink, 800, 'center');
     this.objective(c, 690, 466, '01', 'Make a connection', 'Meet someone new along the way.', C.pink);
     this.objective(c, 690, 574, '02', 'Keep moving', 'Reach the far side before the bell.', C.lilac);
     c.fillStyle = '#fff3e8'; roundRect(c, 690, 687, 540, 57, 20); c.fill();
@@ -249,13 +304,32 @@ export class Renderer {
     c.fillStyle = '#b43d50'; c.beginPath(); c.arc(960, 69, 6, 0, Math.PI * 2); c.fill();
     this.text(c, 'SCORE', 1180, 56, 23, '#fff8eb', 900, 'left', 1);
     this.text(c, String(game.progress.score).padStart(6, '0'), 1180, 117, 43, '#fff8eb', 900, 'left', 3, 'Nunito');
+    this.text(c, 'ENERGY', 1180, 145, 13, '#d9f0d4', 800, 'left');
+    c.fillStyle = 'rgba(255,255,255,.35)'; roundRect(c, 1242, 132, 300, 13, 7); c.fill();
+    const energy = game.protagonist ? game.protagonist.energy / game.protagonist.maxEnergy : 1;
+    c.fillStyle = energy > .25 ? '#ffc7e4' : '#ff7676'; roundRect(c, 1242, 132, 300 * energy, 13, 7); c.fill();
+    this.drawDebug(c, game);
     this.text(c, 'MAKE A CONNECTION', 1445, 54, 17, '#d9f0d4', 800, 'center');
     this.text(c, `${Math.ceil(game.progress.timeLeft)}s TO THE BELL`, 1445, 111, 26, '#fff8eb', 900, 'center', 0, 'Nunito');
     this.drawButtons(c, ui.buttons);
     if ('ontouchstart' in window) {
       this.drawTouchPad(c, ui);
     }
-    this.text(c, '←  → MOVE       SPACE RUN       ESC PAUSE', 960, 1031, 15, C.muted, 800, 'center');
+    this.text(c, '←  → MOVE   •   SPACE RUN   •   TAP / DRAG TO WALK   •   DOUBLE-TAP TO RUN   •   ESC PAUSE', 960, 1031, 15, C.muted, 800, 'center');
+  }
+  drawDebug(c, game) {
+    const player = game.protagonist;
+    c.save(); c.globalAlpha = .91; c.fillStyle = 'rgba(48,39,53,.84)'; roundRect(c, 24, 166, 435, 90, 12); c.fill();
+    this.text(c, 'PLAYER DEBUG', 42, 190, 14, '#ffd6e7', 900, 'left');
+    this.text(c, `ENERGY ${player.energy.toFixed(1)} / 100   •   ${player.state.toUpperCase()}`, 42, 214, 15, '#fff', 700, 'left');
+    this.text(c, `X ${Math.round(player.x)}   Y ${Math.round(player.y)}   •   LEVEL ${game.level}`, 42, 239, 15, '#fff', 700, 'left');
+    roundRect(c, 1450, 164, 444, 151, 12); c.fill();
+    this.text(c, 'STUDENT DEBUG  •  STAR / X / PROGRESS', 1468, 188, 13, '#ffd6e7', 900, 'left');
+    game.maleStudents.forEach((student, index) => {
+      const status = student.mode === 'follow' ? 'FOLLOW' : `${Math.round(student.progress * 100)}%`;
+      this.text(c, `${student.starLevel}★   X ${Math.round(student.x)}   ${status}`, 1468, 213 + index * 19, 14, '#fff', 700, 'left');
+    });
+    c.restore();
   }
   drawTouchPad(c, ui) {
     c.globalAlpha = .78;
@@ -268,7 +342,7 @@ export class Renderer {
   drawGameOver(c, ui) {
     this.dim(c); this.panel(c, 555, 250, 810, 575, 'THE BELL HAS RUNG');
     this.text(c, 'That was a day to remember.', 960, 401, 40, C.ink, 900, 'center', 0, 'Nunito');
-    this.text(c, `Connections made  •  ${ui.score ?? 0} / 5`, 960, 484, 27, C.pink, 800, 'center');
+    this.text(c, `FINAL SCORE  •  ${ui.score ?? 0} POINTS`, 960, 484, 27, C.pink, 800, 'center');
     this.text(c, 'There’s always another school day.', 960, 540, 20, C.muted, 500, 'center');
     this.drawButtons(c, ui.buttons);
   }
@@ -300,3 +374,4 @@ export class Renderer {
 }
 
 function roundRect(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, Math.min(r, h / 2, w / 2)); }
+function floorYToScreen(y) { return 740 + ((y - 200) / 600) * 200; }

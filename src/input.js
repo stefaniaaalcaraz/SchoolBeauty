@@ -4,7 +4,7 @@ export class InputManager {
     this.canvas = canvas;
     this.keys = new Set();
     this.pressedKeys = new Set();
-    this.pointer = { x: 0, y: 0, down: false, pressed: false };
+    this.pointer = { x: 0, y: 0, down: false, pressed: false, doubleTapped: false, lastTap: null };
     this.buttons = [];
     this.bindings = new Map();
     window.addEventListener('keydown', (event) => {
@@ -15,7 +15,12 @@ export class InputManager {
     window.addEventListener('keyup', (event) => this.keys.delete(event.key));
     window.addEventListener('blur', () => this.clear());
     canvas.addEventListener('pointerdown', (event) => {
-      this.updatePointer(event); this.pointer.down = true; this.pointer.pressed = true;
+      this.updatePointer(event);
+      const now = performance.now();
+      const last = this.pointer.lastTap;
+      this.pointer.doubleTapped = Boolean(last && now - last.time < 340 && Math.hypot(this.pointer.x - last.x, this.pointer.y - last.y) < 90);
+      this.pointer.lastTap = { x: this.pointer.x, y: this.pointer.y, time: now };
+      this.pointer.down = true; this.pointer.pressed = true;
       canvas.setPointerCapture?.(event.pointerId);
     });
     canvas.addEventListener('pointermove', (event) => this.updatePointer(event));
@@ -30,8 +35,8 @@ export class InputManager {
   }
   // One-frame events are cleared after update/render, so a pointer event arriving
   // between animation frames is never discarded before the state can consume it.
-  endFrame() { this.pointer.pressed = false; this.pressedKeys.clear(); }
-  clear() { this.keys.clear(); this.pressedKeys.clear(); this.pointer.down = false; this.pointer.pressed = false; }
+  endFrame() { this.pointer.pressed = false; this.pointer.doubleTapped = false; this.pressedKeys.clear(); }
+  clear() { this.keys.clear(); this.pressedKeys.clear(); this.pointer.down = false; this.pointer.pressed = false; this.pointer.doubleTapped = false; }
   isDown(...keys) { return keys.some((key) => this.keys.has(key)); }
   wasPressed(...keys) { return keys.some((key) => this.pressedKeys.has(key)); }
   setButtons(buttons) { this.buttons = buttons; }
