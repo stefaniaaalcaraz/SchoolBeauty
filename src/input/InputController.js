@@ -1,8 +1,9 @@
-/** Normalizes mouse, touch, and keyboard into move, beam, and tap events. */
+/** Normalizes pointer clicks, touch controls, stairs, arrows, and running. */
 export class InputController {
   constructor(canvas, handlers) {
     this.canvas = canvas;
     this.handlers = handlers;
+    this.keys = new Set();
 
     canvas.addEventListener('pointermove', (event) => this.move(event));
     canvas.addEventListener('pointerdown', (event) => {
@@ -18,16 +19,21 @@ export class InputController {
     canvas.addEventListener('pointercancel', () => handlers.onBeamStop());
 
     window.addEventListener('keydown', (event) => {
-      if (event.code === 'Space' && !event.repeat) {
-        event.preventDefault();
-        handlers.onPulse();
-        handlers.onBeamStart();
-      }
+      const isControl = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(event.code);
+      if (isControl) event.preventDefault();
+      if (event.repeat) return;
+      this.keys.add(event.code);
+      if (event.code === 'ArrowUp') handlers.onFloorChange(1);
+      if (event.code === 'ArrowDown') handlers.onFloorChange(-1);
+      if (event.code === 'Space') handlers.onRun(true);
+      this.updateMovement();
     });
     window.addEventListener('keyup', (event) => {
-      if (event.code === 'Space') handlers.onBeamStop();
+      this.keys.delete(event.code);
+      if (event.code === 'Space') handlers.onRun(false);
+      this.updateMovement();
     });
-    window.addEventListener('blur', () => handlers.onBeamStop());
+    window.addEventListener('blur', () => { this.keys.clear(); handlers.onBeamStop(); handlers.onRun(false); this.updateMovement(); });
   }
 
   /** Sends normalized pointer coordinates to player movement and target aim. */
@@ -37,5 +43,11 @@ export class InputController {
       x: (event.clientX - bounds.left) / bounds.width,
       y: (event.clientY - bounds.top) / bounds.height,
     });
+  }
+
+  /** Keeps opposing arrow keys deterministic and sends the current run modifier. */
+  updateMovement() {
+    const axis = Number(this.keys.has('ArrowRight')) - Number(this.keys.has('ArrowLeft'));
+    this.handlers.onControls(axis, this.keys.has('Space'));
   }
 }

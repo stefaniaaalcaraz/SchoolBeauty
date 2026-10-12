@@ -6,15 +6,22 @@ export class AudioManager {
   constructor() {
     this.music = new MusicPlayer();
     this.effects = new SoundEffects();
-    this.enabled = false;
+    this.musicEnabled = false;
+    this.effectsEnabled = false;
   }
 
-  /** Toggles audio and returns the new state for the interface. */
-  toggle() {
-    this.enabled = !this.enabled;
-    if (this.enabled) this.music.play();
+  /** Toggles background music without changing one-shot effects. */
+  toggleMusic() {
+    this.musicEnabled = !this.musicEnabled;
+    if (this.musicEnabled) this.music.play();
     else this.music.stop();
-    return this.enabled;
+    return this.musicEnabled;
+  }
+
+  /** Toggles sound effects without changing the music loop. */
+  toggleEffects() {
+    this.effectsEnabled = !this.effectsEnabled;
+    return this.effectsEnabled;
   }
 
   /** Unlocks the shared Web Audio context following a user gesture. */
@@ -25,11 +32,11 @@ export class AudioManager {
 
   /** Plays a success cue through the sound-effects service. */
   playNote() {
-    if (this.enabled) this.effects.playNote();
+    if (this.effectsEnabled) this.effects.playNote();
   }
 
   /** Plays a caught cue through the sound-effects service. */
   playWarning() {
-    if (this.enabled) this.effects.playWarning();
+    if (this.effectsEnabled) this.effects.playWarning();
   }
 }

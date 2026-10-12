@@ -8,13 +8,14 @@ Serve this folder with any static HTTP server, such as `python -m http.server 80
 
 ## Controls
 
-- Move the mouse to walk toward the cursor; far-away destinations make the player run.
-- Move the cursor over a boy's head to lock on.
-- Press and hold the left mouse button to fire the love beam and fill his heart.
-- Click repeatedly during a rival showdown to win.
-- Collect the dropped hearts to refill the love meter and increase your score.
-- Avoid teachers. Hitting one knocks the player down and drains the meter.
-- The round ends when the clock runs out or the love meter is empty.
+- Use Left/Right arrows or the on-screen touch arrows to walk; hold Space or Run to sprint.
+- Reach a staircase and press Up/Down (or its on-screen arrows) to change floors.
+- Hover over a boy to lock on, then click/tap repeatedly to fill his heart.
+- Click quickly during a rival's showdown; every defeated rival adds a 15% conquest bonus.
+- Avoid teachers. A collision knocks the protagonist down and drains energy.
+- Collect hearts to restore energy. At zero, the protagonist pauses briefly to recover.
+- Each 3-minute match has boy, score, and floor objectives. Level 5 also requires the 5-star boy.
+- Music and sound effects have separate toggles.
 
 ## Project structure
 

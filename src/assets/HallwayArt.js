@@ -1,19 +1,21 @@
 /** Paints the side-view school corridor and chalkboard game HUD. */
-export function hallway(ctx, time, scene) {
+export function hallway(ctx, time, scene, cameraX = 0) {
   const wall = ctx.createLinearGradient(0, 100, 0, 412);
   wall.addColorStop(0, '#fff5e9'); wall.addColorStop(1, '#e9d5c4');
   ctx.fillStyle = wall; ctx.fillRect(0, 0, 1100, 550);
 
-  // Classroom windows and doors create the long side-view hallway from the reference.
-  for (let i = 0; i < 4; i += 1) drawWindowBay(ctx, i * 285 - 12, 120);
-  drawClassroomDoor(ctx, 268, 204);
-  drawClassroomDoor(ctx, 770, 204);
+  // Classroom windows and doors slide more slowly than the cast for depth.
+  ctx.save(); ctx.translate(-(cameraX * .55), 0);
+  for (let x = -285; x < 2000; x += 285) drawWindowBay(ctx, x - 12, 120);
+  for (let x = 268; x < 2400; x += 600) drawClassroomDoor(ctx, x, 204);
   ctx.fillStyle = '#a58b6e'; ctx.fillRect(0, 388, 1100, 11);
   const floor = ctx.createLinearGradient(0, 399, 0, 550);
   floor.addColorStop(0, '#dce1bd'); floor.addColorStop(1, '#f3f0d7');
   ctx.fillStyle = floor; ctx.fillRect(0, 399, 1100, 151);
   ctx.strokeStyle = '#cdd2ad'; ctx.lineWidth = 1;
-  for (let x = 0; x < 1100; x += 82) { ctx.beginPath(); ctx.moveTo(x, 399); ctx.lineTo(x - 12, 550); ctx.stroke(); }
+  const plankStart = -(cameraX % 82);
+  for (let x = plankStart; x < 1100; x += 82) { ctx.beginPath(); ctx.moveTo(x, 399); ctx.lineTo(x - 12, 550); ctx.stroke(); }
+  ctx.restore();
 
   drawScoreboard(ctx, time, scene);
 }
@@ -62,6 +64,9 @@ function drawScoreboard(ctx, time, scene) {
   ctx.fillStyle = '#1d7627'; ctx.fillRect(619, 8, 469, 91);
   ctx.fillStyle = '#f5f4dc'; ctx.font = 'bold 26px monospace'; ctx.fillText('SCORE', 658, 39);
   ctx.font = 'bold 34px monospace'; ctx.fillText(String(scene.score).padStart(8, '0'), 658, 78);
+  ctx.font = 'bold 15px monospace'; ctx.fillText(`LEVEL ${scene.level}   FLOOR ${scene.floorIndex + 1}/${scene.floors}`, 658, 96);
+  const clockText = `${Math.floor(scene.timeLeft / 60)}:${String(scene.timeLeft % 60).padStart(2, '0')}`;
+  ctx.fillStyle = '#493a35'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center'; ctx.fillText(clockText, 551, 102);
   ctx.fillStyle = '#155c24'; ctx.strokeStyle = '#e5edcd'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(995, 16, 62, 58, 12); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#e5edcd'; ctx.beginPath(); ctx.moveTo(1006, 39); ctx.lineTo(1018, 39); ctx.lineTo(1031, 29); ctx.lineTo(1031, 61); ctx.lineTo(1018, 51); ctx.lineTo(1006, 51); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = '#e5edcd'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(1028, 45, 14, -.85, .85); ctx.stroke(); ctx.beginPath(); ctx.arc(1028, 45, 22, -.78, .78); ctx.stroke();

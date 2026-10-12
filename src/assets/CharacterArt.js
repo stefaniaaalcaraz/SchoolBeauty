@@ -1,5 +1,5 @@
 /** Draws an original, softly shaded chibi student with expressive features. */
-export function student(ctx, { x, y, scale = 1, color = 0, direction = 1, gaze = 0, blush = false, watch = false, kind = 'girl', fallen = false }) {
+export function student(ctx, { x, y, scale = 1, color = 0, direction = 1, gaze = 0, blush = false, watch = false, kind = 'girl', fallen = false, gait = 0, running = false }) {
   const palettes = [
     { hair: '#684657', skin: '#f7c9a8', shirt: '#f9f4eb', skirt: '#d97891', accent: '#e8ad62' },
     { hair: '#8a553f', skin: '#f2bf9b', shirt: '#fff7ee', skirt: '#72a5a0', accent: '#dd9d58' },
@@ -12,7 +12,9 @@ export function student(ctx, { x, y, scale = 1, color = 0, direction = 1, gaze =
       ? { hair: '#754c32', skin: '#d99e75', shirt: '#783d50', skirt: '#783d50', accent: '#edbe55' }
       : palettes[color % palettes.length];
   ctx.save();
-  ctx.translate(x, y);
+  const bob = fallen ? 0 : Math.abs(Math.sin(gait * 2)) * (running ? 4 : 1.5);
+  const stride = Math.sin(gait) * (running ? 11 : 5);
+  ctx.translate(x, y + bob);
   ctx.scale(scale * direction, scale);
   if (fallen) ctx.rotate(-Math.PI / 2);
 
@@ -21,9 +23,9 @@ export function student(ctx, { x, y, scale = 1, color = 0, direction = 1, gaze =
   ctx.beginPath(); ctx.ellipse(0, -5, 32, 7, 0, 0, Math.PI * 2); ctx.fill();
   // Legs, socks, and rounded shoes.
   ctx.fillStyle = p.skin;
-  rounded(ctx, -13, -75, 10, 48, 5); rounded(ctx, 3, -75, 10, 48, 5);
-  ctx.fillStyle = '#fff9ee'; rounded(ctx, -14, -40, 11, 18, 5); rounded(ctx, 3, -40, 11, 18, 5);
-  ctx.fillStyle = '#625267'; rounded(ctx, -19, -29, 19, 10, 5); rounded(ctx, 1, -29, 19, 10, 5);
+  rounded(ctx, -13 + stride, -75, 10, 48, 5); rounded(ctx, 3 - stride, -75, 10, 48, 5);
+  ctx.fillStyle = '#fff9ee'; rounded(ctx, -14 + stride, -40, 11, 18, 5); rounded(ctx, 3 - stride, -40, 11, 18, 5);
+  ctx.fillStyle = '#625267'; rounded(ctx, -19 + stride, -29, 19, 10, 5); rounded(ctx, 1 - stride, -29, 19, 10, 5);
   // A-line skirt and softly shaded, collared uniform.
   ctx.fillStyle = p.skirt;
   if (kind === 'boy' || kind === 'teacher') {
@@ -32,6 +34,10 @@ export function student(ctx, { x, y, scale = 1, color = 0, direction = 1, gaze =
   } else {
     ctx.beginPath(); ctx.moveTo(-22, -105); ctx.lineTo(22, -105); ctx.lineTo(29, -70); ctx.quadraticCurveTo(0, -63, -29, -70); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#ffffff55'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-12, -101); ctx.lineTo(-16, -73); ctx.moveTo(0, -101); ctx.lineTo(0, -69); ctx.moveTo(12, -101); ctx.lineTo(16, -73); ctx.stroke();
+  }
+  if (kind === 'protagonist') {
+    // A few tousled locks make her look like an ordinary, slightly awkward new student.
+    ctx.fillStyle = p.hair; ctx.beginPath(); ctx.moveTo(-20, -250); ctx.lineTo(-29, -269); ctx.lineTo(-12, -258); ctx.lineTo(-6, -276); ctx.lineTo(1, -258); ctx.lineTo(14, -270); ctx.lineTo(13, -251); ctx.closePath(); ctx.fill();
   }
   const shirt = ctx.createLinearGradient(-27, -177, 27, -100); shirt.addColorStop(0, '#fffdf5'); shirt.addColorStop(1, p.shirt); ctx.fillStyle = shirt;
   ctx.beginPath(); ctx.moveTo(-21, -174); ctx.quadraticCurveTo(-29, -175, -31, -162); ctx.lineTo(-27, -108); ctx.quadraticCurveTo(0, -99, 27, -108); ctx.lineTo(31, -162); ctx.quadraticCurveTo(29, -175, 21, -174); ctx.lineTo(13, -181); ctx.lineTo(-13, -181); ctx.closePath(); ctx.fill();
@@ -67,11 +73,19 @@ export function student(ctx, { x, y, scale = 1, color = 0, direction = 1, gaze =
   else { ctx.moveTo(8, -225); ctx.quadraticCurveTo(13, -228, 18, -224); }
   ctx.stroke();
   if (kind === 'teacher') { ctx.strokeStyle = '#66515c'; ctx.lineWidth = 2; ctx.strokeRect(-18, -222, 14, 12); ctx.strokeRect(4, -222, 14, 12); ctx.beginPath(); ctx.moveTo(-4, -217); ctx.lineTo(4, -217); ctx.stroke(); }
+  if (kind === 'protagonist') {
+    ctx.strokeStyle = '#594b69'; ctx.lineWidth = 2.4; ctx.fillStyle = '#ffffff30'; ctx.beginPath(); ctx.ellipse(13, -216, 9, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, -216); ctx.lineTo(0, -216); ctx.stroke();
+  }
   ctx.fillStyle = '#e9889870'; ctx.beginPath();
   if (kind === 'teacher') ctx.ellipse(-20, -205, 5, 3.5, 0, 0, Math.PI * 2);
   ctx.ellipse(19, -205, blush ? 7 : 5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = p.skin; ctx.beginPath(); ctx.arc(25, -211, 3, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = '#a65f6c'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(17, -204, 4, .3, 2.8); ctx.stroke();
+  if (kind === 'protagonist') {
+    ctx.fillStyle = '#b96f69';
+    for (const [fx, fy] of [[19, -198], [23, -201], [15, -200], [21, -194]]) { ctx.beginPath(); ctx.arc(fx, fy, 1.5, 0, Math.PI * 2); ctx.fill(); }
+  }
   ctx.restore();
 }
 

@@ -2,11 +2,11 @@ import { hallway } from '../assets/HallwayArt.js';
 import { student } from '../assets/CharacterArt.js';
 
 const TUTORIAL = [
-  { lines: ['You move in the direction of the', 'cursor.', '', 'When the cursor is farther away you', 'will run.'] },
-  { lines: ['When your cursor is on the head of a', 'boy you will get a “lock on”.', '', 'Click and hold the left mouse button', 'to fire a love beam and fill his heart.'] },
-  { lines: ['When firing the beam and a rival', 'appears, a showdown will happen.', '', 'Keep clicking your mouse button to', 'defeat your rival!'] },
-  { lines: ['Firing the beam will drain the meter.', 'Restore it by collecting hearts.', '', 'If the meter reaches zero, the game', 'is over. The clock ends the round.'] },
-  { lines: ['Watch out for teachers in the hall!', '', 'If you bump into one, you will fall', 'down and lose some love meter.'] },
+  { lines: ['Use the left and right arrow keys', 'or touch arrows to walk.', '', 'Hold SPACE or RUN to sprint.', 'At a stair, press UP or DOWN.'] },
+  { lines: ['Hover over a boy to show the target', 'reticle, then click to charm him.', '', 'Keep clicking to fill his heart bar.', 'Each boy has a different star rank.'] },
+  { lines: ['A rival can challenge your target.', 'Click quickly to win the showdown.', '', 'Each rival you defeat adds 15%', 'to that boy’s conquest score.'] },
+  { lines: ['Moving uses energy; running uses', '30% more. Conquests restore energy.', '', 'At zero, you pause briefly to recover.', 'The clock ends the round at 0:00.'] },
+  { lines: ['Watch out for teachers in the hall!', '', 'Bumping into one knocks you down', 'and drains your energy.'] },
 ];
 
 /** Converts tutorial and round state into the framed game canvas. */
@@ -22,8 +22,11 @@ export class HallwayRenderer {
     ctx.save();
     ctx.scale(this.width / 1100, this.height / 550);
     if (scene.mode === 'tutorial') this.drawTutorial(ctx, scene);
-    else {
-      hallway(ctx, this.time, scene);
+    else if (scene.mode === 'objectives') {
+      hallway(ctx, this.time, scene, 0);
+      this.drawObjectives(ctx, scene);
+    } else {
+      hallway(ctx, this.time, scene, scene.cameraX);
       this.drawActors(ctx, scene);
       if (scene.mode === 'gameover') this.drawGameOver(ctx, scene);
     }
@@ -75,15 +78,15 @@ export class HallwayRenderer {
   /** Draws the character vignette that illustrates the selected lesson. */
   drawTutorialScene(ctx, page) {
     if (page === 0) {
-      student(ctx, { x: 260, y: 422, scale: .77, color: 0, direction: 1, kind: 'girl' });
+      student(ctx, { x: 260, y: 422, scale: .77, color: 0, direction: 1, kind: 'protagonist' });
       this.drawCursor(ctx, 428, 163); arrow(ctx, 420, 176, 329, 271, '#7d276a');
     } else if (page === 1) {
-      student(ctx, { x: 228, y: 427, scale: .78, color: 0, kind: 'girl' });
+      student(ctx, { x: 228, y: 427, scale: .78, color: 0, kind: 'protagonist' });
       student(ctx, { x: 449, y: 423, scale: .8, color: 1, kind: 'boy' });
       this.drawBeam(ctx, 250, 258, 446, 214, false); this.drawHeartBadge(ctx, 446, 142, 42);
       spark(ctx, 353, 251, '#ed6ee6');
     } else if (page === 2) {
-      student(ctx, { x: 175, y: 433, scale: .68, color: 0, kind: 'girl' });
+      student(ctx, { x: 175, y: 433, scale: .68, color: 0, kind: 'protagonist' });
       student(ctx, { x: 363, y: 430, scale: .72, color: 1, kind: 'boy' });
       student(ctx, { x: 505, y: 430, scale: .64, color: 2, kind: 'rival' });
       jaggedBurst(ctx, 359, 270, 102, '#ff7ddf');
@@ -91,9 +94,9 @@ export class HallwayRenderer {
       this.drawHeartBadge(ctx, 422, 123, 30);
     } else if (page === 3) {
       this.drawInsetHud(ctx, 382, 150);
-      student(ctx, { x: 550, y: 416, scale: .43, color: 0, kind: 'girl' });
+      student(ctx, { x: 550, y: 416, scale: .43, color: 0, kind: 'protagonist' });
     } else {
-      student(ctx, { x: 247, y: 427, scale: .78, color: 0, kind: 'girl', fallen: true });
+      student(ctx, { x: 247, y: 427, scale: .78, color: 0, kind: 'protagonist', fallen: true });
       student(ctx, { x: 444, y: 427, scale: .82, color: 2, kind: 'teacher' });
       ctx.fillStyle = '#60404f'; ctx.font = 'bold 21px Georgia'; ctx.textAlign = 'center'; ctx.fillText('OOPS!', 263, 218);
     }
@@ -103,7 +106,7 @@ export class HallwayRenderer {
   drawTutorialText(ctx, page) {
     if (page === 3) {
       ctx.fillStyle = '#76276b'; ctx.font = 'bold 24px Georgia'; ctx.textAlign = 'left';
-      ['Firing the beam will', 'drain the meter.', '', 'Collect hearts to refill it.', '', 'Zero meter means game over.'].forEach((line, index) => ctx.fillText(line, 65, 225 + index * 33));
+      ['Moving uses energy.', 'Running drains it 30% faster.', '', 'Conquests restore energy.', 'At zero, you pause to recover.'].forEach((line, index) => ctx.fillText(line, 65, 225 + index * 33));
       ['One round ends', 'when the clock', 'runs out.'].forEach((line, index) => ctx.fillText(line, 755, 245 + index * 35));
       return;
     }
@@ -126,9 +129,16 @@ export class HallwayRenderer {
     ctx.save(); ctx.shadowColor = '#67475988'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 4;
     ctx.fillStyle = '#f4b26a'; ctx.strokeStyle = '#a66a42'; ctx.lineWidth = 4; roundedRect(ctx, 432, 472, 236, 48, 15); ctx.fill(); ctx.stroke();
     ctx.shadowColor = 'transparent'; ctx.fillStyle = '#69391b'; ctx.font = 'bold 26px monospace'; ctx.textAlign = 'center'; ctx.fillText('PLAY', 550, 504);
+    if (page < 4) {
+      ctx.fillStyle = '#f4b26a'; ctx.strokeStyle = '#a66a42'; ctx.lineWidth = 3; roundedRect(ctx, 922, 472, 88, 48, 13); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#69391b'; ctx.font = 'bold 16px monospace'; ctx.fillText('NEXT ›', 966, 502);
+    }
     ctx.fillStyle = '#fff8ee'; ctx.strokeStyle = '#a66a42'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(430, 496, 29, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); flower(ctx, 430, 496, 19, '#e8aa5e');
-    ctx.fillStyle = '#f5d8f1'; ctx.strokeStyle = '#a66a42'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(802, 496, 34, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#884276'; ctx.font = 'bold 30px sans-serif'; ctx.fillText('◖))', 802, 506); ctx.restore();
+    for (const [x, label] of [[785, '♫'], [872, 'SFX']]) {
+      ctx.fillStyle = '#f5d8f1'; ctx.strokeStyle = '#a66a42'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, 496, 29, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#884276'; ctx.font = label === 'SFX' ? 'bold 11px sans-serif' : 'bold 25px sans-serif'; ctx.fillText(label, x, 502);
+    }
+    ctx.restore();
     ctx.fillStyle = '#a04d8b'; ctx.font = '15px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(`${page + 1} / 5`, 550, 455);
   }
 
@@ -143,29 +153,39 @@ export class HallwayRenderer {
 
   /** Renders the live hallway cast and the lock-on / lovebeam feedback. */
   drawActors(ctx, scene) {
-    for (const teacher of scene.teachers) this.drawActor(ctx, teacher, 2, .78, 'teacher');
-    for (const rival of scene.rivals) if (!rival.retreating) this.drawActor(ctx, rival, rival.variant, .75, 'rival');
-    for (const boy of scene.boys) {
-      if (boy.state === 'collected') continue;
-      this.drawActor(ctx, boy, boy.variant, boy.state === 'follower' ? .68 : .77, 'boy');
-      if (boy.charm > 0) this.drawHeartBadge(ctx, boy.x, boy.y - 275, 16, boy.charm / 100);
-      if (scene.duel?.target === boy) jaggedBurst(ctx, boy.x, boy.y - 220, 56, '#ff8ae4');
+    ctx.save(); ctx.translate(-scene.cameraX, 0);
+    for (const teacher of scene.teachers) if (teacher.floor === scene.floorIndex) this.drawActor(ctx, teacher, 2, .78, 'teacher');
+    for (const rival of scene.rivals) if (rival.floor === scene.floorIndex && !rival.defeated) {
+      this.drawActor(ctx, rival, rival.variant, .72, 'rival');
+      this.drawStarLabel(ctx, rival.x, rival.y - 260, rival.level, '#bd73d3');
+      if (scene.duel?.rivals.includes(rival)) this.drawRivalBattleMeter(ctx, rival);
     }
-    for (const heart of scene.pickups) this.drawHeartBadge(ctx, heart.x, heart.y, 17);
+    for (const boy of scene.boys) {
+      if (boy.floor !== scene.floorIndex || boy.state === 'removed') continue;
+      this.drawActor(ctx, boy, boy.variant, boy.state === 'following' ? .68 : .77, 'boy');
+      if (boy.state === 'available') this.drawStarLabel(ctx, boy.x, boy.y - 278, boy.star, '#e7b64e');
+      if (boy.clickProgress > 0 || scene.duel?.boy === boy) this.drawConquestMeter(ctx, boy, scene.duel?.boy === boy ? scene.duel.rivals : []);
+    }
+    for (const heart of scene.pickups) if (heart.floor === scene.floorIndex) this.drawHeartBadge(ctx, heart.x, heart.y, 17);
     const target = scene.nearestBoy();
     if (target) {
       this.drawLockOn(ctx, target.x, target.y - 218);
-      if (scene.beam) this.drawBeam(ctx, scene.player.x + scene.player.facing * 12, scene.player.y - 180, target.x, target.y - 215, scene.duel);
+      if (scene.beam) this.drawBeam(ctx, scene.player.x + scene.player.facing * 12, scene.player.y - 180, target.x, target.y - 215, Boolean(scene.duel));
     }
-    this.drawActor(ctx, scene.player, 0, .78, 'girl', scene.player.fallen > 0);
+    this.drawStairs(ctx, scene);
+    // Paint the protagonist after the NPC layers so she is always in front.
+    this.drawActor(ctx, scene.player, 0, .78, 'protagonist', scene.player.fallen > 0);
     for (const particle of scene.effects.items) this.drawParticle(ctx, particle);
+    ctx.restore();
+    this.drawTouchControls(ctx, scene);
     if (scene.mode === 'playing' && scene.active) this.drawRoundHint(ctx, scene);
   }
 
   /** Draws character shadow, pose, and a fallen pose after a teacher collision. */
   drawActor(ctx, actor, variant, scale, kind, fallen = false) {
     ctx.fillStyle = '#5d594d55'; ctx.beginPath(); ctx.ellipse(actor.x, actor.y - 2, 40 * scale, 9 * scale, 0, 0, Math.PI * 2); ctx.fill();
-    student(ctx, { x: actor.x, y: actor.y, scale, color: variant, direction: actor.facing || 1, kind, fallen, blush: kind === 'boy' && actor.state === 'follower' });
+    student(ctx, { x: actor.x, y: actor.y, scale, color: variant, direction: actor.facing || 1, kind, fallen,
+      gait: actor.animationTime ?? actor.age ?? 0, running: Boolean(actor.running), blush: kind === 'boy' && actor.state === 'following' });
   }
 
   /** Displays the source game's heart lock-on over the hovered boy. */
@@ -208,12 +228,87 @@ export class HallwayRenderer {
   /** Paints result text and one-click return to the tutorial. */
   drawGameOver(ctx, scene) {
     ctx.fillStyle = '#28152f99'; ctx.fillRect(0, 112, 1100, 438);
-    ctx.fillStyle = '#fff6ff'; ctx.strokeStyle = '#91327f'; ctx.lineWidth = 6; roundedRect(ctx, 336, 190, 428, 220, 24); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#76276b'; ctx.textAlign = 'center'; ctx.font = 'bold 36px Georgia'; ctx.fillText('ROUND OVER', 550, 248);
-    ctx.font = 'bold 21px sans-serif'; ctx.fillText(`SCORE  ${String(scene.score).padStart(8, '0')}`, 550, 300);
-    ctx.font = '18px sans-serif'; ctx.fillText(`${scene.hearts} hearts collected`, 550, 336);
-    ctx.fillStyle = '#f4b26a'; ctx.strokeStyle = '#a66a42'; roundedRect(ctx, 426, 360, 248, 40, 12); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#69391b'; ctx.font = 'bold 19px monospace'; ctx.fillText('PLAY AGAIN', 550, 387);
+    ctx.fillStyle = '#fff6ff'; ctx.strokeStyle = '#91327f'; ctx.lineWidth = 6; roundedRect(ctx, 300, 135, 500, 365, 24); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#76276b'; ctx.textAlign = 'center'; ctx.font = 'bold 31px Georgia'; ctx.fillText(scene.results.passed ? 'MISSION COMPLETE!' : 'ROUND OVER', 550, 180);
+    ctx.textAlign = 'left';
+    this.drawChecklist(ctx, 345, 226, scene.conquests >= scene.results.targetBoys, `Conquer boys  ${scene.conquests}/${scene.results.targetBoys}`);
+    this.drawChecklist(ctx, 345, 263, scene.score >= scene.results.targetScore, `Reach score  ${scene.score}/${scene.results.targetScore}`);
+    this.drawChecklist(ctx, 345, 300, scene.visitedFloors.size >= scene.results.targetFloors, `Visit floors  ${scene.visitedFloors.size}/${scene.results.targetFloors}`);
+    if (scene.level === 5) this.drawChecklist(ctx, 345, 337, scene.conqueredStarFive, 'Conquer the 5-star boyfriend');
+    const canAdvance = scene.results.passed && scene.level < 5;
+    this.drawActionButton(ctx, 355, 410, 175, 53, 'RETRY', true);
+    this.drawActionButton(ctx, 570, 410, 175, 53, scene.level === 5 && scene.results.passed ? 'FINISHED' : 'NEXT LEVEL', canAdvance);
+  }
+
+  /** Shows level goals before starting its timer. */
+  drawObjectives(ctx, scene) {
+    ctx.fillStyle = '#341d3488'; ctx.fillRect(0, 112, 1100, 438);
+    ctx.fillStyle = '#fff8ff'; ctx.strokeStyle = '#91327f'; ctx.lineWidth = 6; roundedRect(ctx, 315, 125, 470, 365, 24); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#76276b'; ctx.textAlign = 'center'; ctx.font = 'bold 32px Georgia'; ctx.fillText(`LEVEL ${scene.level} OBJECTIVES`, 550, 175);
+    ctx.font = '18px sans-serif'; ctx.fillText(`3:00 minutes  •  ${scene.floors} school floors`, 550, 212);
+    this.drawChecklist(ctx, 370, 267, false, `Conquer ${scene.objectives.boys} boys`);
+    this.drawChecklist(ctx, 370, 308, false, `Reach ${scene.objectives.score} score`);
+    this.drawChecklist(ctx, 370, 349, false, `Explore all ${scene.floors} floors`);
+    if (scene.objectives.requiresStarFive) this.drawChecklist(ctx, 370, 390, false, 'Conquer a 5-star boy');
+    this.drawActionButton(ctx, 420, 418, 260, 55, 'START MATCH', true);
+  }
+
+  /** Draws a checklist row with a checked or empty square. */
+  drawChecklist(ctx, x, y, checked, label) {
+    ctx.save(); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#803576'; ctx.lineWidth = 2; roundedRect(ctx, x, y - 19, 21, 21, 3); ctx.fill(); ctx.stroke();
+    if (checked) { ctx.strokeStyle = '#32a06b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x + 4, y - 9); ctx.lineTo(x + 9, y - 3); ctx.lineTo(x + 18, y - 16); ctx.stroke(); }
+    ctx.fillStyle = '#512b54'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(label, x + 34, y); ctx.restore();
+  }
+
+  /** Draws an enabled or locked mission button. */
+  drawActionButton(ctx, x, y, width, height, text, enabled) {
+    ctx.fillStyle = enabled ? '#f4b26a' : '#c8b8c8'; ctx.strokeStyle = enabled ? '#a66a42' : '#958895'; ctx.lineWidth = 3;
+    roundedRect(ctx, x, y, width, height, 14); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = enabled ? '#69391b' : '#706875'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.fillText(text, x + width / 2, y + height / 2 + 6);
+  }
+
+  /** Places the male student's level tier over his head. */
+  drawStarLabel(ctx, x, y, count, color) {
+    ctx.save(); ctx.fillStyle = color; ctx.strokeStyle = '#fffdf5'; ctx.lineWidth = 2; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
+    ctx.strokeText('★'.repeat(count), x, y); ctx.fillText('★'.repeat(count), x, y); ctx.restore();
+  }
+
+  /** Renders conquest progress independently from the rival's contest meter. */
+  drawConquestMeter(ctx, boy, rivals) {
+    const x = boy.x - 33; const y = boy.y - 295;
+    ctx.fillStyle = '#fff9ff'; ctx.strokeStyle = '#783671'; ctx.lineWidth = 2; roundedRect(ctx, x, y, 66, 11, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f44bd9'; roundedRect(ctx, x + 2, y + 2, 62 * boy.progress, 7, 3); ctx.fill();
+    if (rivals.length) this.drawRivalBattleMeter(ctx, rivals[0], x, y + 13);
+  }
+
+  /** Shows how close the player is to winning this rival's click challenge. */
+  drawRivalBattleMeter(ctx, rival, x = rival.x - 27, y = rival.y - 280) {
+    const width = x === rival.x - 27 ? 54 : 66;
+    ctx.fillStyle = '#fff9ff'; ctx.strokeStyle = '#783671'; ctx.lineWidth = 2; roundedRect(ctx, x, y, width, 8, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#8563c9'; roundedRect(ctx, x + 1, y + 1, (width - 2) * Math.min(1, rival.battleClicks / rival.battleRequirement), 6, 3); ctx.fill();
+  }
+
+  /** Draws staircase portals and the up/down prompt near the protagonist. */
+  drawStairs(ctx, scene) {
+    for (const x of [24, scene.worldWidth - 70]) {
+      ctx.fillStyle = '#9a8066'; ctx.fillRect(x, 335, 52, 64); ctx.fillStyle = '#c4a987';
+      for (let step = 0; step < 4; step += 1) ctx.fillRect(x + step * 10, 385 - step * 13, 14, 13);
+    }
+    if (scene.nearStairs()) {
+      const x = scene.player.x;
+      if (scene.floorIndex < scene.floors - 1) this.drawActionButton(ctx, x - 48, 331, 42, 40, '↑', true);
+      if (scene.floorIndex > 0) this.drawActionButton(ctx, x + 7, 331, 42, 40, '↓', true);
+    }
+  }
+
+  /** Provides virtual left/right/run controls for touchscreens. */
+  drawTouchControls(ctx, scene) {
+    if (scene.mode !== 'playing') return;
+    for (const [x, label] of [[50, '◀'], [130, '▶'], [1050, 'RUN']]) {
+      ctx.save(); ctx.globalAlpha = .72; ctx.fillStyle = '#fff8ff'; ctx.strokeStyle = '#8e4789'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, 505, label === 'RUN' ? 31 : 26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.fillStyle = '#733375'; ctx.font = label === 'RUN' ? 'bold 12px sans-serif' : 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(label, x, 511); ctx.restore();
+    }
   }
 }
 

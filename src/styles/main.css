@@ -21,6 +21,9 @@ body { min-height: 100vh; display: grid; place-items: center; overflow: hidden; 
 #game { display: block; width: 100%; aspect-ratio: 2 / 1; background: #fff7ff; touch-action: none; cursor: crosshair; }
 .gamebar { height: 68px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; background: linear-gradient(100deg, #fff 0%, #fbfafc 72%, #ffffff 72%); }
 .game-identity { display: flex; align-items: center; gap: 14px; color: #315d8b; font-size: 20px; font-weight: 600; }
+.sound-controls { display: flex; gap: 7px; margin-left: auto; margin-right: 20px; }
+.sound-controls button { border: 1px solid #d3d8ea; border-radius: 18px; padding: 7px 10px; background: #f7f5fb; color: #5c5182; font-weight: 700; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.sound-controls button[aria-pressed="true"] { background: #f0d1ef; border-color: #d68bcc; color: #802b79; }
 .app-icon { width: 45px; height: 45px; display: grid; place-items: center; border: 3px solid #bb54bd; border-radius: 50%; color: #a442a0; font-size: 26px; box-shadow: inset 0 0 0 3px #e9bee7; }
 .game-actions { height: 100%; display: flex; align-items: center; gap: 10px; padding-left: 48px; position: relative; }
 .game-actions::before { content: ""; position: absolute; z-index: 0; inset: 0 -15px 0 -4px; background: linear-gradient(105deg, #a51db2, #398dc2); clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%, 12% 50%, 0 0); }
@@ -36,9 +39,14 @@ body { min-height: 100vh; display: grid; place-items: center; overflow: hidden; 
   .cabinet { width: calc(100vw - 12px); border-width: 6px; border-radius: 20px; }
   .gamebar { height: 54px; padding: 0 8px; }
   .game-identity { gap: 7px; font-size: 14px; }
+  .sound-controls { gap: 4px; margin-right: 7px; }
+  .sound-controls button { padding: 5px 6px; font-size: 8px; }
   .app-icon { width: 34px; height: 34px; font-size: 20px; }
   .game-actions { gap: 6px; padding-left: 25px; }
   .game-actions::before { right: -8px; }
+  .game-actions { padding-left: 0; }
+  .game-actions::before { display: none; }
+  .game-actions .like, .game-actions .dislike, .game-actions .share { display: none; }
   .reaction { width: 34px; height: 34px; font-size: 15px; border-width: 2px; }
   .reaction.fullscreen { font-size: 22px; }
 }

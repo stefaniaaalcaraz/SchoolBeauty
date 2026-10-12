@@ -1,11 +1,21 @@
-/** Balance settings for a full round and its classroom interactions. */
+/** Shared tuning values and level rules for the school adventure. */
 export const CONFIG = Object.freeze({
-  seconds: 60,
+  seconds: 180,
   maxEnergy: 100,
-  beamCostPerSecond: 9,
-  charmPerSecond: 34,
-  rivalPressurePerSecond: 18,
-  tapPower: 13,
-  heartEnergy: 22,
+  walkEnergyPerSecond: 0.15,
+  beamCostPerSecond: 1.2,
+  exhaustionSeconds: 1.4,
+  conquestEnergy: 24,
+  heartEnergy: 12,
+  clickPower: 1,
+  rivalClickPower: 1,
+  baseClicks: 10,
+  rivalBaseClicks: 5,
+  baseObjectiveBoys: 3,
+  baseObjectiveScore: 300,
+  levelDifficultyStep: 1.2,
+  floorWorldWidth: 2200,
   teacherPenalty: 24,
+  floorsByLevel: Object.freeze([3, 4, 4, 5, 5]),
+  boyStarDifficulty: Object.freeze([1, 1.15, 1.3, 1.5, 1.7]),
 });

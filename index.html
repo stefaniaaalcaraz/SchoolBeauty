@@ -11,13 +11,14 @@
   <body>
     <main class="cabinet" aria-label="School Flirt game">
       <div class="screen-top" aria-hidden="true"></div>
-      <canvas id="game" width="1100" height="550" aria-label="School Flirt. Follow the tutorial, charm classmates, collect hearts, and avoid teachers."></canvas>
+      <canvas id="game" width="1100" height="550" tabindex="0" aria-label="School Flirt. Use arrow keys to walk, Space to run, and click boys to charm them."></canvas>
       <footer class="gamebar">
         <div class="game-identity"><span class="app-icon">✿</span><span>School Flirt</span></div>
+        <div class="sound-controls"><button id="music-toggle" aria-pressed="false">♫ Music OFF</button><button id="effects-toggle" aria-pressed="false">♪ SFX OFF</button></div>
         <div class="game-actions">
           <a class="reaction like" href="#" aria-label="Like">♧</a>
           <a class="reaction dislike" href="#" aria-label="Dislike">♧</a>
-          <button id="sound-toggle" class="reaction share" aria-label="Toggle sound" aria-pressed="false">◖))</button>
+          <button class="reaction share" aria-label="Share game">•</button>
           <button id="fullscreen" class="reaction fullscreen" aria-label="Toggle fullscreen">⛶</button>
         </div>
       </footer>

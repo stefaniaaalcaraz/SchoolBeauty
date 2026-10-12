@@ -1,8 +1,9 @@
 /** Bouncing heart collectible that restores energy and adds to the score. */
 export class HeartPickup {
-  constructor(x, y) {
+  constructor(x, y, floor = 0) {
     this.x = x;
     this.y = y;
+    this.floor = floor;
     this.age = 0;
     this.collected = false;
     this.life = 10;

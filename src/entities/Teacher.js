@@ -1,8 +1,9 @@
 /** Teacher patrols the corridor and penalizes collisions with the player. */
 export class Teacher {
-  constructor(x, y, routeWidth = 320) {
+  constructor(x, y, floor = 0, routeWidth = 320) {
     this.x = x;
     this.y = y;
+    this.floor = floor;
     this.centerX = x;
     this.routeWidth = routeWidth;
     this.age = Math.random() * 4;
