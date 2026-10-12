@@ -1,4 +1,4 @@
-import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=3';
+import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=4';
 
 const C = { ink: '#342b39', muted: '#786b78', pink: '#e76c91', coral: '#ef8e7e', cream: '#fff7ee', paper: '#fffdfa', lilac: '#a698c9', mint: '#add8c4', sky: '#cce8ed', darkPink: '#bd4c76' };
 
@@ -106,8 +106,8 @@ export class Renderer {
       return;
     }
     if ([StateId.MENU, StateId.LEVEL_START].includes(game.currentStateId)) {
-      this.drawCharacter(c, 830, 710, '#e76c91', true);
-      this.drawCharacter(c, 1070, 738, '#809bc4', false);
+      this.drawCharacter(c, 650, 800, '#e76c91', true);
+      this.drawCharacter(c, 1290, 800, '#809bc4', false);
     }
   }
   drawCharacter(c, x, y, outfit, heroine) {

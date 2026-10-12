@@ -1,5 +1,5 @@
-import { BaseState } from './base.js?v=3';
-import { StateId, GAME_WIDTH } from '../game.js?v=3';
+import { BaseState } from './base.js?v=4';
+import { StateId, GAME_WIDTH } from '../game.js?v=4';
 
 const WORLD_WIDTH = 3500;
 export class PlayingState extends BaseState {
