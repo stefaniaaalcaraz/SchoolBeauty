@@ -1,5 +1,5 @@
-import { BaseState } from './base.js?v=7';
-import { StateId } from '../game.js?v=7';
+import { BaseState } from './base.js?v=9';
+import { StateId } from '../game.js?v=9';
 
 export class GameOverState extends BaseState {
   enter() {
@@ -10,6 +10,8 @@ export class GameOverState extends BaseState {
       objectives: { ...objectives },
       objectivesMet: nextEnabled,
       boysConquered: objectives.actualConquests,
+      fiveStarConquered: objectives.fiveStarConquered || false,
+      requiresFiveStar: objectives.requiresFiveStar || false,
       rivalsDefeated: this.game.rivalsDefeated || 0,
       score: this.game.progress.score,
       timeLeft: this.game.progress.timeLeft,

@@ -11,5 +11,5 @@ export function levelDefinition(level) { return LEVELS[level] || LEVELS[1]; }
 
 export function createLevelObjectives(level) {
   const { targetConquests, targetScore } = levelDefinition(level);
-  return { targetConquests, targetScore, actualConquests: 0, actualScore: 0, objectivesMet: false };
+  return { targetConquests, targetScore, actualConquests: 0, actualScore: 0, requiresFiveStar: level === 5, fiveStarConquered: false, objectivesMet: false };
 }

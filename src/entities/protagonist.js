@@ -14,6 +14,7 @@ export class Protagonist {
     this.maxEnergy = 100;
     this.isImmobilized = false;
     this.stunTimer = 0;
+    this.fallTimer = 0;
     this.state = 'Idle';
     this.moveTarget = null;
     this.mobileRun = false;
@@ -27,7 +28,8 @@ export class Protagonist {
     this.animationTime += dt;
     if (this.isImmobilized) {
       this.stunTimer -= dt;
-      this.state = 'Stunned';
+      this.fallTimer = Math.max(0, this.fallTimer - dt);
+      this.state = this.fallTimer > 0 ? 'Fall' : 'Stunned';
       if (this.stunTimer <= 0) {
         this.energy = 20;
         this.isImmobilized = false;
@@ -57,7 +59,8 @@ export class Protagonist {
       if (this.energy <= 0) {
         this.isImmobilized = true;
         this.stunTimer = 3;
-        this.state = 'Stunned';
+        this.fallTimer = 0.45;
+        this.state = 'Fall';
         this.moveTarget = null;
       }
       return speed;

@@ -1,11 +1,11 @@
-import { InputManager } from './input.js?v=7';
-import { Renderer } from './renderer.js?v=7';
-import { Camera } from './camera.js?v=7';
-import { MenuState } from './states/menu.js?v=7';
-import { TutorialState } from './states/tutorial.js?v=7';
-import { LevelStartState } from './states/levelStart.js?v=7';
-import { PlayingState } from './states/playing.js?v=7';
-import { GameOverState } from './states/gameOver.js?v=7';
+import { InputManager } from './input.js?v=9';
+import { Renderer } from './renderer.js?v=9';
+import { Camera } from './camera.js?v=9';
+import { MenuState } from './states/menu.js?v=9';
+import { TutorialState } from './states/tutorial.js?v=9';
+import { LevelStartState } from './states/levelStart.js?v=9';
+import { PlayingState } from './states/playing.js?v=9';
+import { GameOverState } from './states/gameOver.js?v=9';
 
 export const GAME_WIDTH = 1920;
 export const GAME_HEIGHT = 1080;

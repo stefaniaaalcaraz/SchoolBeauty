@@ -1,9 +1,9 @@
-import { BaseState } from './base.js?v=7';
-import { StateId, GAME_WIDTH } from '../game.js?v=7';
-import { Protagonist } from '../entities/protagonist.js?v=7';
-import { MaleStudent } from '../entities/maleStudent.js?v=7';
-import { FemaleRival } from '../entities/femaleRival.js?v=7';
-import { levelDefinition, createLevelObjectives } from '../levels.js?v=7';
+import { BaseState } from './base.js?v=9';
+import { StateId, GAME_WIDTH } from '../game.js?v=9';
+import { Protagonist } from '../entities/protagonist.js?v=9';
+import { MaleStudent } from '../entities/maleStudent.js?v=9';
+import { FemaleRival } from '../entities/femaleRival.js?v=9';
+import { levelDefinition, createLevelObjectives } from '../levels.js?v=9';
 
 const WORLD_WIDTH = 5760;
 const FLOOR_MIN_Y = 200;
@@ -30,6 +30,7 @@ export class PlayingState extends BaseState {
       this.game.scorePopTime = 0;
       this.game.campaignWon = false;
       this.specialGirlfriendsSpawned = new Set();
+      this.spawnEscortsForFloor();
     }
     this.game.resumeRequested = false;
     this.game.camera.worldWidth = WORLD_WIDTH;
@@ -113,7 +114,8 @@ export class PlayingState extends BaseState {
       else touchRun = true;
     }
     let dx = ((input.isDown('ArrowRight', 'd', 'D') ? 1 : 0) - (input.isDown('ArrowLeft', 'a', 'A') ? 1 : 0)) || touchX;
-    let dy = (input.isDown('ArrowDown', 's', 'S') && !nearRightStair ? 1 : 0) - (input.isDown('ArrowUp', 'w', 'W') && !nearLeftStair ? 1 : 0);
+    // Hallways are a side-scrolling lane: vertical arrows are reserved for stair interactions.
+    const dy = 0;
     if (!dx && !dy && player.moveTarget) {
       const deltaX = player.moveTarget.x - player.x;
       const deltaY = player.moveTarget.y - player.y;
@@ -169,7 +171,7 @@ export class PlayingState extends BaseState {
   pointerWorldPoint(screenX, screenY) {
     return {
       x: clamp(screenX + this.game.camera.x, 30, WORLD_WIDTH - 30),
-      y: clamp(screenYToFloorY(screenY + 40), FLOOR_MIN_Y, FLOOR_MAX_Y),
+      y: this.game.protagonist.y,
     };
   }
 
@@ -183,12 +185,10 @@ export class PlayingState extends BaseState {
       student.progressVisible = true;
       student.floatingTimer = 0.8;
       if (student.battle.playerProgress >= 100) {
-        const rival = this.game.rivals.find((entry) => entry.id === student.battle.rivalId);
-        this.finishConquest(student, rival ? 1.15 : 1);
-        if (rival) {
-          rival.defeat();
-          this.game.rivalsDefeated += 1;
-        }
+        const rivals = this.game.rivals.filter((entry) => student.battle.rivalIds?.includes(entry.id));
+        this.finishConquest(student, 1 + rivals.length * 0.15);
+        rivals.forEach((rival) => rival.defeat());
+        this.game.rivalsDefeated += rivals.length;
       }
       return;
     }
@@ -206,7 +206,8 @@ export class PlayingState extends BaseState {
     this.game.progress.score += points;
     this.game.objectives.actualConquests += 1;
     this.game.objectives.actualScore += points;
-    this.game.objectives.objectivesMet = this.game.objectives.actualConquests >= this.game.objectives.targetConquests && this.game.objectives.actualScore >= this.game.objectives.targetScore;
+    if (student.starLevel === 5) this.game.objectives.fiveStarConquered = true;
+    this.game.objectives.objectivesMet = this.objectivesMet();
     this.game.scorePopTime = 0.45;
   }
 
@@ -223,16 +224,9 @@ export class PlayingState extends BaseState {
       this.spawnInterval = spawnInterval;
     }
 
-    // A five-star girlfriend is a one-time special spawn tied to that specific student.
-    for (const student of activeMales) {
-      if (student.starLevel !== 5 || student.x < cameraX - 25 || student.x > screenRight + 25) continue;
-      if (game.rivals.length < 3 && !this.specialGirlfriendsSpawned.has(student.id)) {
-        this.spawnRival(5, student.id);
-        this.specialGirlfriendsSpawned.add(student.id);
-      }
-    }
+    this.spawnEscortsForFloor();
 
-    if (game.rivals.length < 3) {
+    if (game.rivals.filter((rival) => !rival.isEscort && rival.mode !== 'leaving' && rival.mode !== 'defeated').length < 3) {
       game.rivalSpawnTimer = Math.max(0, game.rivalSpawnTimer - dt);
       if (game.rivalSpawnTimer <= 0) {
         this.spawnRival(this.rollRivalLevel());
@@ -244,50 +238,94 @@ export class PlayingState extends BaseState {
 
     const removeIds = new Set();
     for (const rival of game.rivals) {
+      if (rival.isEscort && !['defeated', 'leaving'].includes(rival.mode) && !game.maleStudents.some((student) => student.id === rival.girlfriendTargetId && student.mode === 'patrol')) {
+        rival.retreat(cameraX);
+      }
       if (rival.mode === 'battle') {
         const student = game.maleStudents.find((entry) => entry.id === rival.battleTargetId);
         if (!student || !student.battle) {
           rival.retreat(cameraX);
           continue;
         }
-        const battleProgress = rival.advanceBattle(dt);
-        student.battle.rivalProgress = battleProgress;
+        rival.advanceBattle(dt);
+        const battleRivals = game.rivals.filter((entry) => student.battle.rivalIds?.includes(entry.id));
+        student.battle.rivalProgress = Math.min(100, battleRivals.reduce((sum, entry) => sum + entry.rivalProgress, 0));
         student.battle.shakeTime += dt;
-        if (battleProgress >= 100) {
-          student.resetConquest();
-          rival.retreat(cameraX);
-        }
         continue;
       }
 
       const target = this.findRivalTarget(rival);
       const result = rival.update(dt, target, cameraX);
       if (result === 'remove') { removeIds.add(rival.id); continue; }
-      if (result === 'battle' && target && !target.battle && target.progress > 0 && target.progress < 1) {
-        target.battle = { rivalId: rival.id, playerProgress: target.progress * 100, rivalProgress: 0, shakeTime: 0 };
+      if (result === 'battle' && target && target.progress > 0 && target.progress < 1) {
+        if (!target.battle) target.battle = { rivalId: rival.id, rivalIds: [], playerProgress: target.progress * 100, rivalProgress: 0, shakeTime: 0 };
+        if (!target.battle.rivalIds.includes(rival.id)) target.battle.rivalIds.push(rival.id);
+        target.battle.rivalId = target.battle.rivalIds[0];
         rival.beginBattle(target);
       }
     }
+    for (const student of game.maleStudents) {
+      if (!student.battle || student.battle.rivalProgress < 100) continue;
+      const battleRivals = game.rivals.filter((entry) => student.battle.rivalIds.includes(entry.id));
+      student.resetConquest();
+      battleRivals.forEach((rival) => rival.retreat(cameraX));
+    }
     if (removeIds.size) game.rivals = game.rivals.filter((rival) => !removeIds.has(rival.id));
+    this.ensureVisibleCharacter();
   }
 
   findRivalTarget(rival) {
-    const students = this.game.maleStudents.filter((student) => student.mode === 'patrol' && !student.battle && student.progress > 0 && student.progress < 1);
+    const students = this.game.maleStudents.filter((student) => student.mode === 'patrol' && (student.progress > 0 && student.progress < 1 || rival.girlfriendTargetId === student.id));
     if (rival.girlfriendTargetId) {
-      const girlfriendTarget = this.game.maleStudents.find((student) => student.id === rival.girlfriendTargetId && student.mode === 'patrol' && !student.battle);
+      const girlfriendTarget = this.game.maleStudents.find((student) => student.id === rival.girlfriendTargetId && student.mode === 'patrol');
       if (girlfriendTarget) return girlfriendTarget;
     }
     return students.sort((a, b) => Math.hypot(a.x - rival.x, a.y - rival.y) - Math.hypot(b.x - rival.x, b.y - rival.y))[0] || null;
   }
 
-  spawnRival(level, girlfriendTargetId = null) {
+  spawnRival(level, girlfriendTargetId = null, x = null, y = null, escort = false) {
     const random = Math.random;
     const minX = randomBetween(random, 100, 2000);
     const maxX = randomBetween(random, minX + 500, 5600);
-    const x = randomBetween(random, minX, maxX);
-    const y = randomBetween(random, FLOOR_MIN_Y, FLOOR_MAX_Y);
+    const startX = x == null ? randomBetween(random, minX, maxX) : clamp(x, 30, WORLD_WIDTH - 30);
+    const startY = y == null ? randomBetween(random, FLOOR_MIN_Y, FLOOR_MAX_Y) : clamp(y, FLOOR_MIN_Y, FLOOR_MAX_Y);
     const id = `rival-${Math.random().toString(36).slice(2, 9)}`;
-    this.game.rivals.push(new FemaleRival({ id, level, x, y, minX, maxX, girlfriendTargetId, random }));
+    const rival = new FemaleRival({ id, level, x: startX, y: startY, minX, maxX, girlfriendTargetId, random });
+    rival.isEscort = escort;
+    this.game.rivals.push(rival);
+  }
+
+  spawnEscortsForFloor() {
+    for (const student of this.game.maleStudents) {
+      if (student.mode !== 'patrol' || this.specialGirlfriendsSpawned.has(student.id)) continue;
+      if (student.starLevel === 5) {
+        this.spawnRival(5, student.id, student.x + 70, student.y, true);
+        this.specialGirlfriendsSpawned.add(student.id);
+      } else if (student.starLevel === 4) {
+        [2, 2, 3].forEach((level, index) => {
+          this.spawnRival(level, student.id, student.x + 65 + index * 32, student.y + (index - 1) * 26, true);
+        });
+        this.specialGirlfriendsSpawned.add(student.id);
+      }
+    }
+  }
+
+  objectivesMet() {
+    const objectives = this.game.objectives;
+    return objectives.actualConquests >= objectives.targetConquests && objectives.actualScore >= objectives.targetScore &&
+      (!objectives.requiresFiveStar || objectives.fiveStarConquered);
+  }
+
+  ensureVisibleCharacter() {
+    const game = this.game, left = game.camera.x, right = left + GAME_WIDTH;
+    const visibleCount = [...game.maleStudents, ...game.rivals].filter((actor) =>
+      actor.x >= left - 45 && actor.x <= right + 45 && actor.mode !== 'defeated' && actor.mode !== 'leaving').length;
+    if (visibleCount === 0) {
+      const x = clamp(game.protagonist.x + 360, 100, WORLD_WIDTH - 100);
+      this.spawnRival(1, null, x, game.protagonist.y + 25);
+    }
+    const randomRivals = game.rivals.filter((actor) => actor.x >= left - 45 && actor.x <= right + 45 && !actor.isEscort && actor.mode !== 'leaving');
+    while (randomRivals.length > 3) randomRivals.pop().retreat(left);
   }
 
   rollRivalLevel() {
@@ -365,6 +403,7 @@ export class PlayingState extends BaseState {
     game.rivalSpawnTimer = levelDefinition(game.level).rivalSpawnSeconds;
     this.spawnInterval = game.rivalSpawnTimer;
     this.specialGirlfriendsSpawned = new Set();
+    this.spawnEscortsForFloor();
     game.camera.reset();
     game.camera.followX(player.x, WORLD_WIDTH);
   }

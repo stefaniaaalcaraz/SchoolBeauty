@@ -1,6 +1,6 @@
-import { BaseState } from './base.js?v=7';
-import { StateId } from '../game.js?v=7';
-import { levelDefinition } from '../levels.js?v=7';
+import { BaseState } from './base.js?v=9';
+import { StateId } from '../game.js?v=9';
+import { levelDefinition } from '../levels.js?v=9';
 
 export class LevelStartState extends BaseState {
   enter() {
