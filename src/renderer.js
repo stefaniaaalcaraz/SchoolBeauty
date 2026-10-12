@@ -18,45 +18,85 @@ export class Renderer {
   }
   drawBackground(game) {
     const c = this.ctx;
-    if (game.currentStateId === StateId.PLAYING) return this.drawGameplayBackground(game);
-    // Warm paper backdrop with a soft illustrated campus skyline.
-    c.fillStyle = '#fff4eb'; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    c.fillStyle = '#fbe3e4'; c.beginPath(); c.ellipse(970, 735, 750, 290, 0, 0, Math.PI * 2); c.fill();
-    this.drawSchool(c, 210, 278, 0.9);
-    this.drawSchool(c, 1450, 330, 0.62);
-    c.fillStyle = '#e5d6cf'; c.fillRect(0, 870, GAME_WIDTH, 210);
-    c.fillStyle = '#d7c6bc'; c.fillRect(0, 868, GAME_WIDTH, 10);
-    this.drawTree(c, 130, 732, 1); this.drawTree(c, 1745, 770, 0.8);
-    c.fillStyle = 'rgba(255,255,255,.44)'; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.drawHallway(c, game.currentStateId === StateId.PLAYING ? game.camera.x : 0);
   }
-  drawSchool(c, x, y, scale) {
-    c.save(); c.translate(x, y); c.scale(scale, scale);
-    c.fillStyle = '#f4c9bf'; c.fillRect(0, 95, 490, 270);
-    c.fillStyle = '#e89a91'; c.fillRect(24, 70, 442, 35);
-    c.fillStyle = '#f8d8c5'; c.beginPath(); c.moveTo(-12, 75); c.lineTo(245, -15); c.lineTo(510, 75); c.closePath(); c.fill();
-    c.fillStyle = '#d77d7d'; c.beginPath(); c.moveTo(-12, 75); c.lineTo(245, -15); c.lineTo(245, 10); c.lineTo(30, 91); c.closePath(); c.fill();
-    c.fillStyle = '#51475a'; c.fillRect(195, 245, 94, 120);
-    c.fillStyle = '#fff2de';
-    for (let row = 0; row < 2; row++) for (let col = 0; col < 5; col++) c.fillRect(40 + col * 88, 135 + row * 75, 46, 40);
-    c.fillStyle = '#faf1e7'; c.fillRect(211, 252, 62, 55);
-    c.fillStyle = '#d78983'; c.fillRect(215, 256, 54, 48);
-    c.fillStyle = '#fff4e9'; c.font = '800 26px "DM Sans", sans-serif'; c.textAlign = 'center'; c.fillText('SCHOOL', 245, 115);
-    c.restore();
+  /** Repeating school corridor built from Canvas shapes so the scene scrolls cleanly. */
+  drawHallway(c, cameraX) {
+    c.fillStyle = '#f4f0d8'; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    c.fillStyle = '#f8f5e5'; c.fillRect(0, 0, GAME_WIDTH, 132);
+    c.fillStyle = '#ded8bd'; c.fillRect(0, 128, GAME_WIDTH, 13);
+    // Soft ceiling panels and fluorescent fixtures give the hallway depth.
+    for (let x = -80; x < GAME_WIDTH + 180; x += 320) {
+      c.fillStyle = 'rgba(207,200,177,.26)'; c.fillRect(x - (cameraX * .12 % 320), 14, 260, 96);
+      c.fillStyle = '#fffdf1'; roundRect(c, x + 38 - (cameraX * .12 % 320), 42, 150, 16, 8); c.fill();
+    }
+    const sectionWidth = 1480;
+    const offset = (cameraX * .42) % sectionWidth;
+    for (let index = -1; index < 3; index++) {
+      this.drawHallwaySection(c, index * sectionWidth - offset);
+    }
+    // Polished school floor with long perspective-like tiles.
+    const floor = c.createLinearGradient(0, 718, 0, GAME_HEIGHT);
+    floor.addColorStop(0, '#dce7ca'); floor.addColorStop(.28, '#eef0dc'); floor.addColorStop(1, '#f6f1dc');
+    c.fillStyle = floor; c.fillRect(0, 724, GAME_WIDTH, GAME_HEIGHT - 724);
+    c.fillStyle = '#aeb89e'; c.fillRect(0, 710, GAME_WIDTH, 13);
+    c.fillStyle = '#d3dbc0'; c.fillRect(0, 723, GAME_WIDTH, 10);
+    c.strokeStyle = 'rgba(150,164,139,.22)'; c.lineWidth = 3;
+    for (let x = -140 - ((cameraX * .85) % 140); x < GAME_WIDTH + 140; x += 140) {
+      c.beginPath(); c.moveTo(x, 734); c.lineTo(x + 28, GAME_HEIGHT); c.stroke();
+    }
+    for (const y of [820, 936, 1050]) { c.beginPath(); c.moveTo(0, y); c.lineTo(GAME_WIDTH, y); c.stroke(); }
+    c.fillStyle = 'rgba(255,255,255,.17)'; c.fillRect(0, 740, GAME_WIDTH, 115);
   }
-  drawTree(c, x, y, scale) {
-    c.save(); c.translate(x, y); c.scale(scale, scale); c.fillStyle = '#c28e78'; c.fillRect(-14, 38, 28, 126);
-    c.fillStyle = '#b8d3ab'; c.beginPath(); c.arc(0, 0, 70, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#c9dfb9'; c.beginPath(); c.arc(-31, 12, 35, 0, Math.PI * 2); c.arc(34, 15, 39, 0, Math.PI * 2); c.fill(); c.restore();
+  drawHallwaySection(c, x) {
+    c.fillStyle = '#e8e7c7'; c.fillRect(x, 141, 1480, 569);
+    c.fillStyle = 'rgba(255,255,255,.23)'; c.fillRect(x, 145, 1480, 23);
+    // Classroom windows, tall double doors, and corridor signage.
+    this.drawClassroomWindow(c, x + 54, 178, 370, 394);
+    this.drawClassroomWindow(c, x + 1050, 178, 355, 394);
+    this.drawClassroomDoor(c, x + 570, 191, 332, 520);
+    c.fillStyle = '#a98c68'; c.fillRect(x + 44, 184, 390, 12);
+    c.fillStyle = '#a98c68'; c.fillRect(x + 1040, 184, 376, 12);
+    c.fillStyle = '#e5e0c5'; c.fillRect(x + 430, 141, 12, 570);
+    c.fillStyle = '#d1d0b5'; c.fillRect(x + 432, 141, 3, 570);
+    // Floor marker and a little student notice board.
+    c.fillStyle = '#aa8161'; roundRect(c, x + 78, 250, 102, 96, 9); c.fill();
+    c.fillStyle = '#fff5d9'; roundRect(c, x + 85, 257, 88, 82, 6); c.fill();
+    c.fillStyle = '#a56b4f'; c.font = '800 40px "DM Sans", sans-serif'; c.textAlign = 'center'; c.fillText('2F', x + 129, 313);
+    c.fillStyle = '#b78b61'; roundRect(c, x + 965, 265, 60, 130, 8); c.fill();
+    c.fillStyle = '#faf1da'; roundRect(c, x + 972, 272, 46, 115, 5); c.fill();
+    c.fillStyle = '#e8968b'; c.fillRect(x + 982, 292, 26, 31); c.fillStyle = '#d1bd9b'; c.fillRect(x + 982, 333, 26, 5); c.fillRect(x + 982, 346, 22, 5);
+    // Wall panels and continuous wood trim.
+    c.fillStyle = '#d9d7b8'; c.fillRect(x, 680, 1480, 20);
+    c.fillStyle = '#b9b89d'; c.fillRect(x, 700, 1480, 10);
+    c.strokeStyle = 'rgba(181,177,147,.34)'; c.lineWidth = 3;
+    for (let panelX = x + 12; panelX < x + 1480; panelX += 150) { c.beginPath(); c.moveTo(panelX, 590); c.lineTo(panelX, 680); c.stroke(); }
   }
-  drawGameplayBackground(game) {
-    const c = this.ctx; c.fillStyle = '#d8edf0'; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    c.fillStyle = '#faf0e3'; c.fillRect(0, 650, GAME_WIDTH, 430);
-    c.fillStyle = '#e7c7ba'; c.fillRect(0, 850, GAME_WIDTH, 230);
-    c.fillStyle = '#c5a69a'; c.fillRect(0, 847, GAME_WIDTH, 12);
-    c.save(); c.translate(-game.camera.x * 0.38, 0);
-    for (let i = 0; i < 5; i++) this.drawSchool(c, i * 610 + 160, 420, 0.58);
-    c.restore();
-    for (let i = 0; i < 28; i++) { const x = (i * 191 - game.camera.x * 0.7) % 2050; c.fillStyle = i % 2 ? '#f4b5bf' : '#fff'; c.beginPath(); c.arc((x + 2050) % 2050, 770 + Math.sin(i * 3) * 16, 5, 0, Math.PI * 2); c.fill(); }
+  drawClassroomWindow(c, x, y, w, h) {
+    c.fillStyle = '#9c8d72'; c.fillRect(x - 9, y - 9, w + 18, h + 18);
+    c.fillStyle = '#eddae5'; c.fillRect(x, y, w, h);
+    const glass = c.createLinearGradient(x, y, x + w, y + h);
+    glass.addColorStop(0, '#e8d9e8'); glass.addColorStop(.5, '#f3e7ed'); glass.addColorStop(1, '#d5e0d9');
+    c.fillStyle = glass; c.fillRect(x + 5, y + 5, w - 10, h - 10);
+    c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.moveTo(x + 25, y + 8); c.lineTo(x + 95, y + 8); c.lineTo(x + 35, y + h - 8); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,249,239,.68)'; c.fillRect(x + w * .43, y, 13, h);
+    c.fillStyle = '#a18f76'; c.fillRect(x + w * .65, y, 11, h); c.fillRect(x, y + h * .56, w, 12);
+    c.fillStyle = '#c4b69a'; c.fillRect(x - 5, y + h - 2, w + 10, 13);
+  }
+  drawClassroomDoor(c, x, y, w, h) {
+    c.fillStyle = '#9e8e72'; c.fillRect(x - 12, y - 8, w + 24, h + 20);
+    c.fillStyle = '#ede9d7'; c.fillRect(x, y, w, h);
+    c.fillStyle = '#b2a185'; c.fillRect(x + w / 2 - 5, y, 10, h);
+    for (let side = 0; side < 2; side++) {
+      const panelX = x + side * (w / 2) + 22;
+      c.fillStyle = '#a79a81'; c.fillRect(panelX, y + 27, w / 2 - 44, 170);
+      c.fillStyle = '#e9dfea'; c.fillRect(panelX + 5, y + 32, w / 2 - 54, 160);
+      c.fillStyle = 'rgba(255,255,255,.4)'; c.beginPath(); c.moveTo(panelX + 10, y + 36); c.lineTo(panelX + 39, y + 36); c.lineTo(panelX + 7, y + 115); c.closePath(); c.fill();
+      const knobX = x + (side ? w / 2 - 22 : w / 2 + 12);
+      c.fillStyle = '#98896e'; c.beginPath(); c.arc(knobX, y + 280, 7, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#d4ceb9'; c.fillRect(panelX, y + 230, w / 2 - 44, 235);
+    }
+    c.fillStyle = '#a39479'; c.fillRect(x - 15, y + h - 14, w + 30, 18);
   }
   drawEntities(game) {
     const c = this.ctx;
@@ -73,18 +113,48 @@ export class Renderer {
   drawCharacter(c, x, y, outfit, heroine) {
     if (x < -100 || x > GAME_WIDTH + 100) return;
     c.save(); c.translate(x, y);
-    c.fillStyle = 'rgba(88,65,78,.14)'; c.beginPath(); c.ellipse(0, 90, 57, 13, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#e7b7a2'; c.beginPath(); c.arc(0, -49, 44, 0, Math.PI * 2); c.fill();
-    c.fillStyle = heroine ? '#5f425d' : '#55485c'; c.beginPath(); c.arc(0, -62, 48, Math.PI, 0); c.lineTo(42, -33); c.quadraticCurveTo(12, -15, -40, -37); c.closePath(); c.fill();
-    c.fillStyle = '#3e3444'; c.beginPath(); c.arc(-15, -48, 3, 0, Math.PI * 2); c.arc(15, -48, 3, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = '#bb6f74'; c.lineWidth = 3; c.beginPath(); c.arc(0, -36, 9, .2, Math.PI - .2); c.stroke();
-    c.fillStyle = '#e7b7a2'; c.fillRect(-14, -6, 28, 30);
-    c.fillStyle = outfit; c.beginPath(); c.moveTo(-48, 17); c.lineTo(48, 17); c.lineTo(60, 77); c.lineTo(-59, 77); c.closePath(); c.fill();
-    c.fillStyle = '#fff1e5'; c.fillRect(-10, 15, 20, 40);
-    c.fillStyle = '#433a4d'; c.fillRect(-39, 76, 30, 58); c.fillRect(9, 76, 30, 58);
-    c.fillStyle = '#fff8ef'; c.fillRect(-42, 127, 38, 13); c.fillRect(5, 127, 38, 13);
-    c.fillStyle = '#dca894'; c.fillRect(-61, 27, 16, 48); c.fillRect(45, 27, 16, 48);
-    if (heroine) { c.fillStyle = '#fff5df'; c.beginPath(); c.arc(36, -89, 14, 0, Math.PI * 2); c.fill(); c.fillStyle = '#e76c91'; c.beginPath(); c.arc(36, -89, 9, 0, Math.PI * 2); c.fill(); }
+    const skin = '#edbd9e', outline = '#49394b';
+    c.fillStyle = 'rgba(63,71,61,.2)'; c.beginPath(); c.ellipse(0, 4, 52, 11, 0, 0, Math.PI * 2); c.fill();
+    // Walking legs are offset so the silhouette reads clearly in profile.
+    c.strokeStyle = outline; c.lineWidth = 24; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(-7, -58); c.lineTo(-22, -29); c.lineTo(-33, -3); c.stroke();
+    c.strokeStyle = heroine ? '#273856' : '#8f2940'; c.lineWidth = 17;
+    c.beginPath(); c.moveTo(-7, -58); c.lineTo(-22, -29); c.lineTo(-33, -3); c.stroke();
+    c.strokeStyle = outline; c.lineWidth = 24; c.beginPath(); c.moveTo(11, -58); c.lineTo(24, -31); c.lineTo(34, -6); c.stroke();
+    c.strokeStyle = heroine ? '#273856' : '#8f2940'; c.lineWidth = 17; c.beginPath(); c.moveTo(11, -58); c.lineTo(24, -31); c.lineTo(34, -6); c.stroke();
+    // Shoes point forward, toward the right edge of the screen.
+    c.fillStyle = '#fff8ed'; roundRect(c, -53, -10, 30, 12, 6); c.fill(); roundRect(c, 20, -12, 35, 12, 6); c.fill();
+    c.fillStyle = heroine ? '#566fa6' : '#633c59'; roundRect(c, -50, -9, 23, 8, 5); c.fill(); roundRect(c, 24, -11, 27, 8, 5); c.fill();
+    // Torso in profile with a visible forward arm.
+    c.fillStyle = outline; c.beginPath(); c.moveTo(-22, -121); c.lineTo(19, -118); c.lineTo(28, -62); c.lineTo(-18, -55); c.closePath(); c.fill();
+    c.fillStyle = outfit; c.beginPath(); c.moveTo(-19, -119); c.lineTo(15, -116); c.lineTo(21, -67); c.lineTo(-15, -61); c.closePath(); c.fill();
+    c.fillStyle = heroine ? '#fff7eb' : '#e7c5d0'; c.beginPath(); c.moveTo(-5, -114); c.lineTo(7, -112); c.lineTo(11, -75); c.lineTo(-2, -73); c.closePath(); c.fill();
+    c.fillStyle = skin; c.beginPath(); c.moveTo(11, -111); c.quadraticCurveTo(31, -102, 30, -85); c.lineTo(38, -71); c.quadraticCurveTo(40, -64, 34, -61); c.quadraticCurveTo(27, -60, 24, -68); c.lineTo(14, -81); c.closePath(); c.fill();
+    c.strokeStyle = outline; c.lineWidth = 3; c.stroke();
+    if (heroine) {
+      c.fillStyle = '#fff4e4'; c.beginPath(); c.moveTo(-27, -67); c.lineTo(25, -70); c.lineTo(37, -17); c.lineTo(-42, -17); c.closePath(); c.fill();
+      c.fillStyle = '#596b99'; c.beginPath(); c.moveTo(-19, -66); c.lineTo(26, -68); c.lineTo(49, -21); c.lineTo(-47, -21); c.closePath(); c.fill();
+      c.strokeStyle = '#8293bd'; c.lineWidth = 3;
+      for (let pleat = -28; pleat <= 30; pleat += 18) { c.beginPath(); c.moveTo(pleat, -62); c.lineTo(pleat - 8, -24); c.stroke(); }
+    } else {
+      c.fillStyle = '#d84d62'; c.beginPath(); c.moveTo(-17, -64); c.lineTo(19, -65); c.lineTo(24, -27); c.lineTo(-20, -27); c.closePath(); c.fill();
+      c.strokeStyle = '#f0808a'; c.lineWidth = 2; c.beginPath(); c.moveTo(-9, -57); c.lineTo(16, -57); c.stroke();
+    }
+    // Side-profile face: one eye, a small nose, and swept hair. Every student faces right.
+    c.fillStyle = skin; c.beginPath(); c.moveTo(-27, -193); c.quadraticCurveTo(-3, -218, 20, -194); c.quadraticCurveTo(34, -180, 26, -157); c.lineTo(39, -147); c.quadraticCurveTo(42, -143, 34, -140); c.lineTo(31, -128); c.quadraticCurveTo(15, -115, -10, -126); c.lineTo(-29, -141); c.closePath(); c.fill();
+    c.strokeStyle = outline; c.lineWidth = 4; c.stroke();
+    c.fillStyle = '#fff8ed'; c.beginPath(); c.ellipse(18, -168, 7, 9, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#433443'; c.beginPath(); c.arc(21, -168, 3.6, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#8e554e'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(27, -144); c.quadraticCurveTo(22, -139, 16, -142); c.stroke();
+    c.fillStyle = heroine ? '#a43b53' : '#b77153'; c.beginPath(); c.arc(-23, -151, 9, 0, Math.PI * 2); c.fill();
+    const hair = heroine ? '#6b304f' : '#353442';
+    c.fillStyle = outline; c.beginPath(); c.moveTo(-34, -162); c.lineTo(-35, -196); c.quadraticCurveTo(-20, -222, 8, -213); c.quadraticCurveTo(30, -207, 34, -187); c.lineTo(26, -181); c.lineTo(12, -191); c.lineTo(4, -174); c.lineTo(-4, -190); c.lineTo(-13, -173); c.lineTo(-19, -188); c.lineTo(-25, -161); c.closePath(); c.fill();
+    c.fillStyle = hair; c.beginPath(); c.moveTo(-31, -164); c.lineTo(-31, -193); c.quadraticCurveTo(-18, -215, 7, -208); c.quadraticCurveTo(25, -204, 29, -188); c.lineTo(24, -184); c.lineTo(11, -194); c.lineTo(2, -178); c.lineTo(-5, -193); c.lineTo(-14, -177); c.lineTo(-20, -190); c.lineTo(-26, -164); c.closePath(); c.fill();
+    if (heroine) {
+      c.fillStyle = '#542742'; c.beginPath(); c.moveTo(-29, -165); c.quadraticCurveTo(-58, -153, -56, -103); c.quadraticCurveTo(-54, -84, -43, -77); c.lineTo(-39, -130); c.lineTo(-26, -150); c.closePath(); c.fill();
+      c.fillStyle = '#e9b6c2'; c.beginPath(); c.arc(31, -200, 12, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#e76c91'; c.beginPath(); c.arc(31, -200, 7, 0, Math.PI * 2); c.fill();
+    }
     c.restore();
   }
   drawOverlay(game) {
@@ -151,11 +221,36 @@ export class Renderer {
     this.text(c, title, x + 83, y + 36, 21, C.ink, 800, 'left'); this.text(c, detail, x + 83, y + 62, 16, C.muted, 500, 'left');
   }
   drawHud(c, game, ui) {
-    c.fillStyle = 'rgba(255,253,250,.9)'; roundRect(c, 56, 42, 355, 108, 28); c.fill();
-    this.text(c, 'FIRST PERIOD', 86, 82, 16, C.darkPink, 800, 'left'); this.text(c, 'Make a connection', 86, 120, 27, C.ink, 800, 'left');
-    c.fillStyle = 'rgba(255,253,250,.9)'; roundRect(c, 1480, 42, 380, 108, 28); c.fill();
-    this.text(c, `♥  ${game.progress.score} / 5`, 1555, 108, 28, C.pink, 800, 'left');
-    this.text(c, `BELL  ${Math.ceil(game.progress.timeLeft)}s`, 1782, 108, 23, C.ink, 800, 'center');
+    const top = c.createLinearGradient(0, 0, 0, 150);
+    top.addColorStop(0, '#16752e'); top.addColorStop(1, '#105b29');
+    c.fillStyle = top; c.fillRect(0, 0, GAME_WIDTH, 151);
+    c.fillStyle = '#0a4c25'; c.fillRect(0, 145, GAME_WIDTH, 8);
+    this.text(c, 'BEAUTY TIME', 292, 53, 27, '#fff8eb', 900, 'center', 0, 'Nunito');
+    c.fillStyle = '#f8e8f1'; roundRect(c, 78, 75, 520, 47, 22); c.fill();
+    c.fillStyle = '#bd4d8b'; roundRect(c, 84, 81, 508, 35, 17); c.fill();
+    const remaining = Math.max(0, Math.min(1, game.progress.timeLeft / 60));
+    const shineWidth = Math.max(0, 496 * remaining);
+    if (shineWidth > 0) {
+      const bar = c.createLinearGradient(84, 0, 84 + shineWidth, 0);
+      bar.addColorStop(0, '#ffc6eb'); bar.addColorStop(.82, '#f99de0'); bar.addColorStop(1, '#fff2fa');
+      c.fillStyle = bar; roundRect(c, 84, 81, shineWidth, 35, 17); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(84 + shineWidth - 3, 98, 15, 0, Math.PI * 2); c.fill();
+    }
+    // Center clock echoes the reference HUD and makes the bell timer easy to read.
+    c.fillStyle = '#f4eedc'; c.fillRect(855, 0, 210, 145);
+    c.fillStyle = '#a2937e'; c.beginPath(); c.arc(960, 73, 59, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff8e9'; c.beginPath(); c.arc(960, 69, 52, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#d4c5b6'; c.lineWidth = 2;
+    for (let tick = 0; tick < 12; tick++) {
+      const angle = tick * Math.PI / 6 - Math.PI / 2;
+      c.beginPath(); c.moveTo(960 + Math.cos(angle) * 42, 69 + Math.sin(angle) * 42); c.lineTo(960 + Math.cos(angle) * 46, 69 + Math.sin(angle) * 46); c.stroke();
+    }
+    c.strokeStyle = '#b43d50'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(960, 69); c.lineTo(960 + Math.cos(-Math.PI / 2 + remaining * Math.PI * 2) * 35, 69 + Math.sin(-Math.PI / 2 + remaining * Math.PI * 2) * 35); c.stroke();
+    c.fillStyle = '#b43d50'; c.beginPath(); c.arc(960, 69, 6, 0, Math.PI * 2); c.fill();
+    this.text(c, 'SCORE', 1180, 56, 23, '#fff8eb', 900, 'left', 1);
+    this.text(c, String(game.progress.score).padStart(6, '0'), 1180, 117, 43, '#fff8eb', 900, 'left', 3, 'Nunito');
+    this.text(c, 'MAKE A CONNECTION', 1445, 54, 17, '#d9f0d4', 800, 'center');
+    this.text(c, `${Math.ceil(game.progress.timeLeft)}s TO THE BELL`, 1445, 111, 26, '#fff8eb', 900, 'center', 0, 'Nunito');
     this.drawButtons(c, ui.buttons);
     if ('ontouchstart' in window) {
       this.drawTouchPad(c, ui);
