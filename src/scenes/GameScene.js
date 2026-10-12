@@ -28,13 +28,15 @@ export class GameScene {
 
   /** Restores all round state and creates a fresh school cast. */
   reset() {
+    this.mode = 'tutorial';
+    this.tutorialPage = 0;
     this.active = false;
     this.elapsed = 0;
     this.timeLeft = this.config.seconds;
     this.score = 0;
     this.energy = this.config.maxEnergy;
     this.hearts = 0;
-    this.pointer = { x: 0.52, y: 0.77 };
+    this.pointer = { x: 0.52, y: 0.76 };
     this.beam = false;
     this.pendingTaps = 0;
     this.player = new Player();
@@ -50,18 +52,39 @@ export class GameScene {
   /** Begins a fresh round and broadcasts initial HUD values. */
   start() {
     this.reset();
+    this.mode = 'playing';
     this.active = true;
-    this.rivals = [new Rival(360, 350), new Rival(775, 470)];
-    this.teachers = [new Teacher(560, 472)];
+    this.player.setDestination(this.pointer);
+    this.rivals = [new Rival(385, 424, 100), new Rival(785, 424, 95)];
+    this.teachers = [new Teacher(560, 424, 345)];
     for (let i = 0; i < 5; i += 1) this.addBoy(i);
     this.emitHud();
     this.emit('tick', this.timeLeft);
   }
 
+  /** Restarts the illustrated tutorial after a round has finished. */
+  showTutorial() {
+    this.reset();
+  }
+
+  /** Handles tutorial arrows and its PLAY button using canvas coordinates. */
+  handleTutorialPress(point) {
+    const x = point.x * 1100;
+    const y = point.y * 550;
+    if (y > 456 && x > 375 && x < 720) {
+      this.start();
+      return;
+    }
+    if (y > 200 && y < 405) {
+      if (x > 1010) this.tutorialPage = Math.min(4, this.tutorialPage + 1);
+      if (x < 90) this.tutorialPage = Math.max(0, this.tutorialPage - 1);
+    }
+  }
+
   /** Sends pointer position to the player and the beam target selector. */
   setPointer(point) {
     this.pointer = point;
-    this.player.setDestination(point);
+    if (point.y >= 0.2) this.player.setDestination(point);
   }
 
   /** Toggles the charm beam while the primary input is held. */
@@ -95,15 +118,17 @@ export class GameScene {
     if (this.spawnIn <= 0 && this.boys.filter((boy) => boy.state === 'available').length < 4) this.addBoy();
     if (this.timeLeft === 0 || this.energy <= 0) {
       this.active = false;
-      this.emit('end', this.score);
+      this.mode = 'gameover';
+      this.beam = false;
     }
   }
 
   /** Resolves beam targets, rival click duels, teacher collisions, and hearts. */
   updateInteractions(dt) {
     const p = this.player.position;
-    const rival = this.rivals.find((item) => !item.retreating && Math.hypot(item.x - p.x, item.y - p.y) < 115);
     const target = this.nearestBoy();
+    const rival = target && this.rivals.find((item) => !item.retreating && Math.hypot(item.x - target.x, item.y - target.y) < 122);
+    if (this.beam && target) this.energy = Math.max(0, this.energy - dt * this.config.beamCostPerSecond);
     if (rival && target && this.beam && target.state === 'available') {
       this.duel = { rival, target };
       rival.pressure += dt * this.config.rivalPressurePerSecond;
@@ -124,7 +149,6 @@ export class GameScene {
     } else {
       this.duel = null;
       if (this.beam && target && target.state === 'available') {
-        this.energy = Math.max(0, this.energy - dt * this.config.beamCostPerSecond);
         target.charm += dt * this.config.charmPerSecond;
         if (target.charm >= 100) this.charmBoy(target);
       } else {
@@ -142,7 +166,7 @@ export class GameScene {
       }
     }
     this.pickups = this.pickups.filter((heart) => {
-      if (Math.hypot(heart.x - p.x, heart.y - (p.y - 70)) > 42) return true;
+      if (Math.hypot(heart.x - p.x, heart.y - (p.y - 32)) > 48) return true;
       this.hearts += 1;
       this.score += 10;
       this.energy = Math.min(this.config.maxEnergy, this.energy + this.config.heartEnergy);
@@ -160,7 +184,7 @@ export class GameScene {
     boy.state = 'follower';
     boy.charm = 0;
     boy.followIndex = this.boys.filter((item) => item.state === 'follower').length;
-    this.pickups.push(new HeartPickup(boy.x, boy.y - 75));
+    this.pickups.push(new HeartPickup(boy.x, boy.y - 25));
     this.effects.burst(boy.x, boy.y - 145, '♥');
     this.emit('note');
   }
@@ -168,10 +192,12 @@ export class GameScene {
   /** Finds the closest available classmate within the beam's reach. */
   nearestBoy() {
     let best = null;
-    let distance = 190;
+    let distance = 52;
+    const cursorX = this.pointer.x * 1100;
+    const cursorY = this.pointer.y * 550;
     for (const boy of this.boys) {
       if (boy.state !== 'available') continue;
-      const next = Math.hypot(boy.x - this.player.position.x, boy.y - this.player.position.y);
+      const next = Math.hypot(boy.x - cursorX, (boy.y - 218) - cursorY);
       if (next < distance) { best = boy; distance = next; }
     }
     return best;
@@ -179,8 +205,8 @@ export class GameScene {
 
   /** Creates a classmate and gently staggers future arrivals. */
   addBoy(index = this.boys.length) {
-    const x = 150 + (index % 4) * 205 + Math.random() * 45;
-    const y = index % 2 ? 440 : 355;
+    const x = 165 + (index % 5) * 195 + Math.random() * 22;
+    const y = index % 2 ? 423 : 408;
     this.boys.push(new Boy(x, y, index % 4));
     this.spawnIn = 2.5;
   }

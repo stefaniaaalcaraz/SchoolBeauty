@@ -1,1 +1,27 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fff7ef"><title>School Beauty — Hallway Crush</title><link rel="stylesheet" href="src/styles/main.css"></head><body><main class="shell"><header><a class="brand">✿ school<b>beauty</b></a><span>● HALLWAY HANGOUT　•　EPISODE 01</span><button id="sound">♫ Sound off</button></header><section class="layout"><aside><p class="eyebrow">✦ YOUR NEXT LITTLE ADVENTURE</p><h1>A little <em>crush,</em><br>a lot of courage.</h1><p>Explore the school hall, charm your favorite classmates, and make a new little friend group. Keep an eye out for rivals and teachers!</p><div class="howto">☝　<b>How to play</b><br>　　Move your mouse to walk.<br>　　Hold on a boy to charm him.<br>　　Tap quickly to win rival duels.<br>　　Collect hearts and dodge teachers.</div><p class="tip">♡ Hearts restore your energy</p></aside><section class="game"><div class="heading">01　 <b>Passing period</b><small>　THE EAST HALL</small><label>BEST <b id="best">000</b></label></div><div class="frame"><canvas id="game" width="960" height="600" aria-label="Move with the mouse, hold to charm classmates, tap quickly to win rival duels, collect hearts, and avoid teachers."></canvas><div class="overlay" id="intro"><div class="sticker">SCHOOL<br>ROMANCE</div><div class="card"><h2>Ready, cutie?</h2><p>Make friends and collect hearts<br>before the bell rings!</p><button id="start">Let’s go　→</button></div></div><div class="overlay hidden" id="result"><div class="card"><small>PASSING PERIOD OVER</small><h2 id="result-title">Cute work!</h2><p id="result-copy">The bell rang, but you made it count.</p><b>LOVE NOTES　<span id="final">0</span></b><p><button id="again">Play again　↻</button></p></div></div></div><div class="hud"><span>♥ HEARTS　<b id="score">00</b></span><span>ENERGY <i><b id="meter"></b></i> <b id="energy-value">100%</b></span><span>FRIENDS　<b id="followers">0</b>　·　◷ <b id="timer">60</b>s</span></div></section></section><section class="friends"><b>Your hallway<br><small>FRIENDS & ALMOSTS</small></b><span>Charm classmates, win over rivals, and scoop up the hearts. <em>Who will you catch?</em></span><span>♡　✦　✿　···</span></section><footer>MADE WITH A LITTLE EXTRA SPARKLE ♥ <span>YOUR STORY, YOUR PACE</span></footer></main><script type="module" src="src/main.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#2084b2">
+    <meta name="description" content="School Flirt — a sweet little hallway adventure.">
+    <title>School Flirt</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+  </head>
+  <body>
+    <main class="cabinet" aria-label="School Flirt game">
+      <div class="screen-top" aria-hidden="true"></div>
+      <canvas id="game" width="1100" height="550" aria-label="School Flirt. Follow the tutorial, charm classmates, collect hearts, and avoid teachers."></canvas>
+      <footer class="gamebar">
+        <div class="game-identity"><span class="app-icon">✿</span><span>School Flirt</span></div>
+        <div class="game-actions">
+          <a class="reaction like" href="#" aria-label="Like">♧</a>
+          <a class="reaction dislike" href="#" aria-label="Dislike">♧</a>
+          <button id="sound-toggle" class="reaction share" aria-label="Toggle sound" aria-pressed="false">◖))</button>
+          <button id="fullscreen" class="reaction fullscreen" aria-label="Toggle fullscreen">⛶</button>
+        </div>
+      </footer>
+    </main>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

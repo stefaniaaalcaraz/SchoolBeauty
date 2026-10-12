@@ -8,8 +8,11 @@ export class InputController {
     canvas.addEventListener('pointerdown', (event) => {
       canvas.setPointerCapture?.(event.pointerId);
       this.move(event);
-      handlers.onPulse();
-      handlers.onBeamStart();
+      const activate = handlers.onPress?.();
+      if (activate !== false) {
+        handlers.onPulse();
+        handlers.onBeamStart();
+      }
     });
     canvas.addEventListener('pointerup', () => handlers.onBeamStop());
     canvas.addEventListener('pointercancel', () => handlers.onBeamStop());

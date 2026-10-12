@@ -11,6 +11,7 @@ export class Boy {
     this.duel = 0;
     this.age = Math.random() * 5;
     this.followOffset = 0;
+    this.followIndex = 0;
   }
 
   /** Adds a small idle sway before the boy is charmed. */
@@ -27,12 +28,7 @@ export class Boy {
     }
   }
 
-  /** Changes this target into a follower and drops a collectible heart. */
-  capture() {
-    this.state = 'following';
-  }
-
-  /** Draws this boy in the leader's follower formation. */
+  /** Changes this target into a follower in the player's formation. */
   capture() {
     this.state = 'follower';
   }
