@@ -135,7 +135,7 @@ export class Renderer {
     this.drawButtons(c, ui.buttons);
   }
   drawLevelStart(c, ui) {
-    this.dim(c); this.panel(c, 520, 210, 880, 665, 'TODAY'S PLAN');
+    this.dim(c); this.panel(c, 520, 210, 880, 665, "TODAY'S PLAN");
     this.text(c, 'Fresh start, full heart.', 960, 333, 40, C.ink, 900, 'center', 0, 'Nunito');
     this.text(c, 'FIRST PERIOD • MONDAY MORNING', 960, 379, 16, C.darkPink, 800, 'center');
     this.objective(c, 690, 466, '01', 'Make a connection', 'Meet someone new along the way.', C.pink);
