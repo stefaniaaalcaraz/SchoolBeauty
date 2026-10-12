@@ -1,31 +1,34 @@
-import { BaseState } from './base.js?v=6';
-import { StateId, GAME_WIDTH } from '../game.js?v=6';
-import { Protagonist } from '../entities/protagonist.js?v=6';
-import { MaleStudent } from '../entities/maleStudent.js?v=6';
-import { FemaleRival } from '../entities/femaleRival.js?v=6';
+import { BaseState } from './base.js?v=7';
+import { StateId, GAME_WIDTH } from '../game.js?v=7';
+import { Protagonist } from '../entities/protagonist.js?v=7';
+import { MaleStudent } from '../entities/maleStudent.js?v=7';
+import { FemaleRival } from '../entities/femaleRival.js?v=7';
+import { levelDefinition, createLevelObjectives } from '../levels.js?v=7';
 
 const WORLD_WIDTH = 5760;
 const FLOOR_MIN_Y = 200;
 const FLOOR_MAX_Y = 800;
-const LEVEL_STARS = Object.freeze({
-  1: [1, 1, 1, 2, 2],
-  2: [1, 1, 2, 2, 3],
-  3: [1, 2, 2, 3, 4],
-  4: [1, 2, 3, 4, 4],
-  5: [2, 3, 4, 5, 5],
-});
-
 export class PlayingState extends BaseState {
   enter() {
     const resume = this.game.resumeRequested;
     if (!resume) {
-      this.game.progress = { playerX: 960, score: 0, timeLeft: 60 };
+      const definition = levelDefinition(this.game.level);
+      this.game.currentFloor = 1;
+      this.game.totalFloors = definition.floors;
+      this.game.objectives = createLevelObjectives(this.game.level);
+      this.game.floorData = new Map();
+      this.game.floorTransition = null;
+      this.game.progress = { playerX: 960, score: 0, timeLeft: 180 };
       this.game.protagonist = new Protagonist();
-      this.game.maleStudents = this.createStudents(this.game.level || 1);
+      this.game.maleStudents = this.createStudents(this.game.level || 1, 1);
+      this.game.floorData.set(1, this.game.maleStudents);
       this.game.rivals = [];
-      this.game.rivalSpawnTimer = 10;
-      this.spawnInterval = 10;
+      this.game.rivalSpawnTimer = definition.rivalSpawnSeconds;
+      this.spawnInterval = definition.rivalSpawnSeconds;
       this.game.rivalsDefeated = 0;
+      this.game.displayEnergy = this.game.protagonist.energy;
+      this.game.scorePopTime = 0;
+      this.game.campaignWon = false;
       this.specialGirlfriendsSpawned = new Set();
     }
     this.game.resumeRequested = false;
@@ -35,13 +38,13 @@ export class PlayingState extends BaseState {
     this.mobileRunUntilTarget = false;
     this.pointerStartedMove = false;
     this.ui = { buttons: [{ id: 'pause', label: 'Ⅱ', x: 1800, y: 53, w: 66, h: 58, style: 'secondary', fontSize: 22 }] };
-    this.refreshButtons();
+    this.refreshHudButtons();
   }
 
-  createStudents(level) {
+  createStudents(level, floor) {
     const random = Math.random;
     const students = [];
-    const stars = LEVEL_STARS[level] || LEVEL_STARS[1];
+    const stars = levelDefinition(level).studentsPerFloor;
     for (let i = 0; i < stars.length; i++) {
       const minX = randomBetween(random, 100, 2000);
       const maxX = randomBetween(random, minX + 500, 5600);
@@ -52,7 +55,7 @@ export class PlayingState extends BaseState {
         x = randomBetween(random, minX, maxX);
         y = randomBetween(random, FLOOR_MIN_Y + 20, FLOOR_MAX_Y - 20);
       }
-      students.push(new MaleStudent({ id: `student-${i + 1}`, starLevel: stars[i], x, y, minX, maxX, floor: 1, random }));
+      students.push(new MaleStudent({ id: `L${level}-F${floor}-student-${i + 1}`, starLevel: stars[i], x, y, minX, maxX, floor, random }));
     }
     return students;
   }
@@ -66,6 +69,19 @@ export class PlayingState extends BaseState {
       game.changeState(StateId.LEVEL_START);
       return;
     }
+
+    if (this.game.floorTransition) {
+      this.updateFloorTransition(dt);
+      this.refreshHudButtons();
+      return;
+    }
+
+    const nearLeftStair = this.isNearStair('left');
+    const nearRightStair = this.isNearStair('right');
+    if (action === 'stairUp' && this.game.currentFloor > 1) { this.startFloorTransition(this.game.currentFloor - 1); return; }
+    if (action === 'stairDown' && this.game.currentFloor < this.game.totalFloors) { this.startFloorTransition(this.game.currentFloor + 1); return; }
+    if (input.wasPressed('ArrowUp') && nearLeftStair && this.game.currentFloor > 1) { this.startFloorTransition(this.game.currentFloor - 1); return; }
+    if (input.wasPressed('ArrowDown') && nearRightStair && this.game.currentFloor < this.game.totalFloors) { this.startFloorTransition(this.game.currentFloor + 1); return; }
 
     const player = game.protagonist;
     const targets = game.maleStudents.filter((student) => student.mode === 'patrol');
@@ -97,7 +113,7 @@ export class PlayingState extends BaseState {
       else touchRun = true;
     }
     let dx = ((input.isDown('ArrowRight', 'd', 'D') ? 1 : 0) - (input.isDown('ArrowLeft', 'a', 'A') ? 1 : 0)) || touchX;
-    let dy = (input.isDown('ArrowDown', 's', 'S') ? 1 : 0) - (input.isDown('ArrowUp', 'w', 'W') ? 1 : 0);
+    let dy = (input.isDown('ArrowDown', 's', 'S') && !nearRightStair ? 1 : 0) - (input.isDown('ArrowUp', 'w', 'W') && !nearLeftStair ? 1 : 0);
     if (!dx && !dy && player.moveTarget) {
       const deltaX = player.moveTarget.x - player.x;
       const deltaY = player.moveTarget.y - player.y;
@@ -111,6 +127,8 @@ export class PlayingState extends BaseState {
     if (player.isImmobilized) this.mobileRunUntilTarget = false;
     game.progress.playerX = player.x;
     game.progress.timeLeft = Math.max(0, game.progress.timeLeft - dt);
+    game.scorePopTime = Math.max(0, game.scorePopTime - dt);
+    game.displayEnergy += (player.energy - game.displayEnergy) * Math.min(1, dt * 10);
     game.camera.followX(player.x, WORLD_WIDTH);
 
     for (const student of targets) student.update(dt);
@@ -134,10 +152,12 @@ export class PlayingState extends BaseState {
       if (student.mode === 'patrol') student.activeClickTimer = Math.max(0, student.activeClickTimer - dt);
     }
     this.updateRivals(dt);
+    this.saveCurrentFloor();
 
-    if (game.progress.timeLeft <= 0 || game.maleStudents.every((student) => student.conquered)) {
+    if (game.progress.timeLeft <= 0) {
       game.changeState(StateId.GAME_OVER);
     }
+    this.refreshHudButtons();
   }
 
   targetAtScreen(screenX, screenY) {
@@ -182,7 +202,12 @@ export class PlayingState extends BaseState {
     const followers = this.game.maleStudents.filter((entry) => entry.mode === 'follow').length;
     student.followerIndex = followers - 1;
     this.game.protagonist.recoverEnergy(25);
-    this.game.progress.score += Math.round(100 * student.starLevel * multiplier);
+    const points = Math.round(100 * student.starLevel * multiplier);
+    this.game.progress.score += points;
+    this.game.objectives.actualConquests += 1;
+    this.game.objectives.actualScore += points;
+    this.game.objectives.objectivesMet = this.game.objectives.actualConquests >= this.game.objectives.targetConquests && this.game.objectives.actualScore >= this.game.objectives.targetScore;
+    this.game.scorePopTime = 0.45;
   }
 
   updateRivals(dt) {
@@ -191,7 +216,8 @@ export class PlayingState extends BaseState {
     const screenRight = cameraX + GAME_WIDTH;
     const activeMales = game.maleStudents.filter((student) => student.mode === 'patrol');
     const highStarVisible = activeMales.some((student) => student.starLevel >= 4 && student.x >= cameraX - 25 && student.x <= screenRight + 25);
-    const spawnInterval = highStarVisible ? 10 / 1.5 : 10;
+    const baseSpawnInterval = levelDefinition(game.level).rivalSpawnSeconds;
+    const spawnInterval = highStarVisible ? baseSpawnInterval / 1.5 : baseSpawnInterval;
     if (spawnInterval !== this.spawnInterval) {
       game.rivalSpawnTimer = this.spawnInterval > 0 ? game.rivalSpawnTimer * spawnInterval / this.spawnInterval : spawnInterval;
       this.spawnInterval = spawnInterval;
@@ -270,6 +296,84 @@ export class PlayingState extends BaseState {
     if (roll < 0.90) return 2;
     if (roll < 0.98) return 3;
     return 4;
+  }
+
+  isNearStair(side) {
+    const x = this.game.protagonist.x;
+    return side === 'left' ? x <= 150 : x >= WORLD_WIDTH - 150;
+  }
+
+  refreshHudButtons() {
+    const buttons = [{ id: 'pause', label: 'Ⅱ', x: 1820, y: 92, w: 62, h: 52, style: 'secondary', fontSize: 20 }];
+    if (this.isNearStair('left')) buttons.push({ id: 'stairUp', label: '▲', x: 1630, y: 932, w: 60, h: 60, style: this.game.currentFloor > 1 ? 'blue' : 'disabled', disabled: this.game.currentFloor <= 1, fontSize: 26 });
+    if (this.isNearStair('right')) buttons.push({ id: 'stairDown', label: '▼', x: 1630, y: 1002, w: 60, h: 60, style: this.game.currentFloor < this.game.totalFloors ? 'blue' : 'disabled', disabled: this.game.currentFloor >= this.game.totalFloors, fontSize: 26 });
+    this.ui.buttons = buttons;
+    this.refreshButtons();
+  }
+
+  startFloorTransition(destinationFloor) {
+    this.game.floorTransition = { elapsed: 0, destinationFloor, loaded: false };
+    this.game.protagonist.moveTarget = null;
+  }
+
+  updateFloorTransition(dt) {
+    const game = this.game;
+    const transition = game.floorTransition;
+    game.progress.timeLeft = Math.max(0, game.progress.timeLeft - dt);
+    game.scorePopTime = Math.max(0, game.scorePopTime - dt);
+    game.displayEnergy += (game.protagonist.energy - game.displayEnergy) * Math.min(1, dt * 10);
+    transition.elapsed += dt;
+    if (!transition.loaded && transition.elapsed >= 0.25) {
+      this.loadFloor(transition.destinationFloor);
+      transition.loaded = true;
+    }
+    if (game.progress.timeLeft <= 0) { game.floorTransition = null; game.changeState(StateId.GAME_OVER); return; }
+    if (transition.elapsed >= 0.5) game.floorTransition = null;
+  }
+
+  saveCurrentFloor() {
+    const game = this.game;
+    const floorStudents = game.maleStudents.filter((student) => student.mode === 'patrol');
+    for (const student of floorStudents) {
+      if (student.battle) {
+        student.progress = student.battle.playerProgress / 100;
+        student.clicks = Math.floor(student.progress * student.requiredClicks);
+        student.progress = student.clicks / student.requiredClicks;
+        student.battle = null;
+        student.activeClickTimer = 0;
+      }
+    }
+    game.floorData.set(game.currentFloor, floorStudents);
+  }
+
+  loadFloor(floor) {
+    const game = this.game;
+    this.saveCurrentFloor();
+    const followers = game.maleStudents.filter((student) => student.mode === 'follow');
+    game.currentFloor = floor;
+    const students = game.floorData.get(floor) || this.createStudents(game.level, floor);
+    game.floorData.set(floor, students);
+    game.maleStudents = [...followers, ...students];
+    for (const follower of followers) follower.floor = floor;
+    const player = game.protagonist;
+    player.x = 960;
+    player.trailDistance = 0;
+    player.trail = [{ x: player.x, y: player.y, distance: 0 }];
+    player.moveTarget = null;
+    game.progress.playerX = player.x;
+    game.rivals = []; // Rivals are local to their floor and do not cross staircases.
+    game.rivalSpawnTimer = levelDefinition(game.level).rivalSpawnSeconds;
+    this.spawnInterval = game.rivalSpawnTimer;
+    this.specialGirlfriendsSpawned = new Set();
+    game.camera.reset();
+    game.camera.followX(player.x, WORLD_WIDTH);
+  }
+
+  advanceFloor(floorDelta) {
+    const next = this.game.currentFloor + floorDelta;
+    if (next < 1 || next > this.game.totalFloors) return false;
+    this.startFloorTransition(next);
+    return true;
   }
 
   playClickSound() {

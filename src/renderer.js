@@ -1,4 +1,5 @@
-import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=6';
+import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=7';
+import { levelDefinition } from './levels.js?v=7';
 
 const C = { ink: '#342b39', muted: '#786b78', pink: '#e76c91', coral: '#ef8e7e', cream: '#fff7ee', paper: '#fffdfa', lilac: '#a698c9', mint: '#add8c4', sky: '#cce8ed', darkPink: '#bd4c76' };
 
@@ -18,11 +19,12 @@ export class Renderer {
   }
   drawBackground(game) {
     const c = this.ctx;
-    this.drawHallway(c, game.currentStateId === StateId.PLAYING ? game.camera.x : 0);
+    this.drawHallway(c, game.currentStateId === StateId.PLAYING ? game.camera.x : 0, game.currentFloor || 1);
   }
   /** Repeating school corridor built from Canvas shapes so the scene scrolls cleanly. */
-  drawHallway(c, cameraX) {
-    c.fillStyle = '#f4f0d8'; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  drawHallway(c, cameraX, floorNumber) {
+    const palette = FLOOR_PALETTES[(floorNumber - 1) % FLOOR_PALETTES.length];
+    c.fillStyle = palette.wall; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     c.fillStyle = '#f8f5e5'; c.fillRect(0, 0, GAME_WIDTH, 132);
     c.fillStyle = '#ded8bd'; c.fillRect(0, 128, GAME_WIDTH, 13);
     // Soft ceiling panels and fluorescent fixtures give the hallway depth.
@@ -33,11 +35,11 @@ export class Renderer {
     const sectionWidth = 1480;
     const offset = (cameraX * .42) % sectionWidth;
     for (let index = -1; index < 3; index++) {
-      this.drawHallwaySection(c, index * sectionWidth - offset);
+      this.drawHallwaySection(c, index * sectionWidth - offset, palette, floorNumber);
     }
     // Polished school floor with long perspective-like tiles.
     const floor = c.createLinearGradient(0, 718, 0, GAME_HEIGHT);
-    floor.addColorStop(0, '#dce7ca'); floor.addColorStop(.28, '#eef0dc'); floor.addColorStop(1, '#f6f1dc');
+    floor.addColorStop(0, palette.floorTop); floor.addColorStop(.28, palette.floorMid); floor.addColorStop(1, palette.floorBottom);
     c.fillStyle = floor; c.fillRect(0, 724, GAME_WIDTH, GAME_HEIGHT - 724);
     c.fillStyle = '#aeb89e'; c.fillRect(0, 710, GAME_WIDTH, 13);
     c.fillStyle = '#d3dbc0'; c.fillRect(0, 723, GAME_WIDTH, 10);
@@ -48,8 +50,8 @@ export class Renderer {
     for (const y of [820, 936, 1050]) { c.beginPath(); c.moveTo(0, y); c.lineTo(GAME_WIDTH, y); c.stroke(); }
     c.fillStyle = 'rgba(255,255,255,.17)'; c.fillRect(0, 740, GAME_WIDTH, 115);
   }
-  drawHallwaySection(c, x) {
-    c.fillStyle = '#e8e7c7'; c.fillRect(x, 141, 1480, 569);
+  drawHallwaySection(c, x, palette, floorNumber) {
+    c.fillStyle = palette.wall; c.fillRect(x, 141, 1480, 569);
     c.fillStyle = 'rgba(255,255,255,.23)'; c.fillRect(x, 145, 1480, 23);
     // Classroom windows, tall double doors, and corridor signage.
     this.drawClassroomWindow(c, x + 54, 178, 370, 394);
@@ -62,7 +64,7 @@ export class Renderer {
     // Floor marker and a little student notice board.
     c.fillStyle = '#aa8161'; roundRect(c, x + 78, 250, 102, 96, 9); c.fill();
     c.fillStyle = '#fff5d9'; roundRect(c, x + 85, 257, 88, 82, 6); c.fill();
-    c.fillStyle = '#a56b4f'; c.font = '800 40px "DM Sans", sans-serif'; c.textAlign = 'center'; c.fillText('2F', x + 129, 313);
+    c.fillStyle = '#a56b4f'; c.font = '800 40px "DM Sans", sans-serif'; c.textAlign = 'center'; c.fillText(`${floorNumber}F`, x + 129, 313);
     c.fillStyle = '#b78b61'; roundRect(c, x + 965, 265, 60, 130, 8); c.fill();
     c.fillStyle = '#faf1da'; roundRect(c, x + 972, 272, 46, 115, 5); c.fill();
     c.fillStyle = '#e8968b'; c.fillRect(x + 982, 292, 26, 31); c.fillStyle = '#d1bd9b'; c.fillRect(x + 982, 333, 26, 5); c.fillRect(x + 982, 346, 22, 5);
@@ -102,6 +104,7 @@ export class Renderer {
     const c = this.ctx;
     if (game.currentStateId === StateId.PLAYING) {
       const cameraX = game.camera.x;
+      this.drawStaircases(c, cameraX);
       // Both student groups share the middle layer and are ordered by floor depth.
       const actors = [
         ...game.maleStudents.map((student) => ({ kind: 'student', actor: student })),
@@ -118,6 +121,19 @@ export class Renderer {
     if ([StateId.MENU, StateId.LEVEL_START].includes(game.currentStateId)) {
       this.drawCharacter(c, 650, 800, '#e76c91', true);
       this.drawCharacter(c, 1290, 800, '#809bc4', false);
+    }
+  }
+  drawStaircases(c, cameraX) {
+    for (const worldX of [50, 5710]) {
+      const x = worldX - cameraX;
+      if (x < -120 || x > GAME_WIDTH + 120) continue;
+      c.fillStyle = '#8B4513'; c.fillRect(x, 690, 100, 200);
+      c.strokeStyle = '#5d2d12'; c.lineWidth = 4; c.strokeRect(x, 690, 100, 200);
+      c.strokeStyle = '#d39a63'; c.lineWidth = 5;
+      for (let step = 1; step <= 6; step++) {
+        const sy = 690 + step * 27;
+        c.beginPath(); c.moveTo(x + 8, sy); c.lineTo(x + 92, sy); c.stroke();
+      }
     }
   }
   drawStudent(c, student, cameraX, game) {
@@ -257,6 +273,7 @@ export class Renderer {
   }
   drawOverlay(game) {
     const c = this.ctx, ui = game.currentState?.ui || { buttons: [] };
+    this.pointer = game.input.pointer;
     this.drawTopChrome(c, game);
     if (game.currentStateId === StateId.MENU) this.drawMenu(c, ui);
     else if (game.currentStateId === StateId.TUTORIAL) this.drawTutorial(c, ui);
@@ -275,7 +292,7 @@ export class Renderer {
     this.text(c, 'A LITTLE CRUSH, A LOT OF CHAOS', 960, 207, 19, C.darkPink, 800, 'center', 3);
     this.text(c, 'School', 960, 355, 136, C.ink, 900, 'center', 0, 'Nunito');
     this.text(c, 'Beauty', 960, 475, 136, C.pink, 900, 'center', 0, 'Nunito');
-    this.text(c, 'Make the halls your runway.', 960, 529, 28, C.muted, 600, 'center');
+    this.text(c, ui.campaignWon ? 'YOU WIN! Five levels, beautifully conquered.' : 'Make the halls your runway.', 960, 529, ui.campaignWon ? 24 : 28, ui.campaignWon ? '#4CAF50' : C.muted, 800, 'center');
     this.drawButtons(c, ui.buttons);
     this.drawSoundToggles(c, ui);
     this.text(c, 'A SCHOOL-DAY STORY', 960, 1017, 16, C.muted, 700, 'center');
@@ -303,16 +320,22 @@ export class Renderer {
     this.drawButtons(c, ui.buttons);
   }
   drawLevelStart(c, ui) {
-    this.dim(c); this.panel(c, 520, 210, 880, 665, "TODAY'S PLAN");
-    this.text(c, 'Fresh start, full heart.', 960, 333, 40, C.ink, 900, 'center', 0, 'Nunito');
-    this.text(c, 'FIRST PERIOD • MONDAY MORNING', 960, 379, 16, C.darkPink, 800, 'center');
+    this.dim(c, .8); this.popup(c, 560, 240, 800, 600);
     const level = ui.level || 1;
-    this.text(c, `LEVEL ${String(level).padStart(2, '0')} / 05  •  ${['3 × 1★  +  2 × 2★', '2 × 1★  +  2 × 2★  +  1 × 3★', '1 × 1★  +  2 × 2★  +  1 × 3★  +  1 × 4★', '1 × 1★  +  1 × 2★  +  1 × 3★  +  2 × 4★', '1 × 2★  +  1 × 3★  +  1 × 4★  +  2 × 5★'][level - 1]}`, 960, 433, 18, C.ink, 800, 'center');
-    this.objective(c, 690, 466, '01', 'Make a connection', 'Meet someone new along the way.', C.pink);
-    this.objective(c, 690, 574, '02', 'Keep moving', 'Reach the far side before the bell.', C.lilac);
-    c.fillStyle = '#fff3e8'; roundRect(c, 690, 687, 540, 57, 20); c.fill();
-    this.text(c, 'ARROWS TO MOVE     •     SPACE TO RUN', 960, 724, 16, C.muted, 800, 'center');
+    this.text(c, ui.paused ? 'Paused' : `Level ${level} Objectives`, 960, 326, 32, '#222', 800, 'center');
+    if (ui.paused) {
+      this.text(c, 'Take a breather. Your timer is paused.', 960, 410, 24, C.muted, 600, 'center');
+      this.text(c, `Floor ${this._currentFloor || 1}  •  ${formatTime(this._timeLeft || 0)} remaining`, 960, 462, 21, C.ink, 700, 'center');
+    } else {
+      this.text(c, `❤  Conquer ${ui.objectives?.targetConquests ?? 3 + level} Boys`, 960, 465, 27, C.ink, 700, 'center');
+      this.text(c, `★  Reach ${Number(ui.objectives?.targetScore || 1000).toLocaleString('en-US')} Score`, 960, 545, 27, C.ink, 700, 'center');
+      this.text(c, 'Arrows to move  •  Space to run  •  Tap or click to move', 960, 630, 18, C.muted, 600, 'center');
+    }
     this.drawButtons(c, ui.buttons);
+  }
+  popup(c, x, y, w, h) {
+    c.save(); c.fillStyle = '#fff'; c.strokeStyle = '#4A90E2'; c.lineWidth = 4;
+    roundRect(c, x, y, w, h, 10); c.fill(); c.stroke(); c.restore();
   }
   objective(c, x, y, number, title, detail, color) {
     c.fillStyle = '#fff8f3'; roundRect(c, x, y, 540, 84, 20); c.fill();
@@ -321,53 +344,42 @@ export class Renderer {
     this.text(c, title, x + 83, y + 36, 21, C.ink, 800, 'left'); this.text(c, detail, x + 83, y + 62, 16, C.muted, 500, 'left');
   }
   drawHud(c, game, ui) {
-    const top = c.createLinearGradient(0, 0, 0, 150);
-    top.addColorStop(0, '#16752e'); top.addColorStop(1, '#105b29');
-    c.fillStyle = top; c.fillRect(0, 0, GAME_WIDTH, 151);
-    c.fillStyle = '#0a4c25'; c.fillRect(0, 145, GAME_WIDTH, 8);
-    this.text(c, 'BEAUTY TIME', 292, 53, 27, '#fff8eb', 900, 'center', 0, 'Nunito');
-    c.fillStyle = '#f8e8f1'; roundRect(c, 78, 75, 520, 47, 22); c.fill();
-    c.fillStyle = '#bd4d8b'; roundRect(c, 84, 81, 508, 35, 17); c.fill();
-    const remaining = Math.max(0, Math.min(1, game.progress.timeLeft / 60));
-    const shineWidth = Math.max(0, 496 * remaining);
-    if (shineWidth > 0) {
-      const bar = c.createLinearGradient(84, 0, 84 + shineWidth, 0);
-      bar.addColorStop(0, '#ffc6eb'); bar.addColorStop(.82, '#f99de0'); bar.addColorStop(1, '#fff2fa');
-      c.fillStyle = bar; roundRect(c, 84, 81, shineWidth, 35, 17); c.fill();
-      c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(84 + shineWidth - 3, 98, 15, 0, Math.PI * 2); c.fill();
-    }
-    // Center clock echoes the reference HUD and makes the bell timer easy to read.
-    c.fillStyle = '#f4eedc'; c.fillRect(855, 0, 210, 145);
-    c.fillStyle = '#a2937e'; c.beginPath(); c.arc(960, 73, 59, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#fff8e9'; c.beginPath(); c.arc(960, 69, 52, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = '#d4c5b6'; c.lineWidth = 2;
-    for (let tick = 0; tick < 12; tick++) {
-      const angle = tick * Math.PI / 6 - Math.PI / 2;
-      c.beginPath(); c.moveTo(960 + Math.cos(angle) * 42, 69 + Math.sin(angle) * 42); c.lineTo(960 + Math.cos(angle) * 46, 69 + Math.sin(angle) * 46); c.stroke();
-    }
-    c.strokeStyle = '#b43d50'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(960, 69); c.lineTo(960 + Math.cos(-Math.PI / 2 + remaining * Math.PI * 2) * 35, 69 + Math.sin(-Math.PI / 2 + remaining * Math.PI * 2) * 35); c.stroke();
-    c.fillStyle = '#b43d50'; c.beginPath(); c.arc(960, 69, 6, 0, Math.PI * 2); c.fill();
-    this.text(c, 'SCORE', 1180, 56, 23, '#fff8eb', 900, 'left', 1);
-    this.text(c, String(game.progress.score).padStart(6, '0'), 1180, 117, 43, '#fff8eb', 900, 'left', 3, 'Nunito');
-    this.text(c, 'ENERGY', 1180, 145, 13, '#d9f0d4', 800, 'left');
-    c.fillStyle = 'rgba(255,255,255,.35)'; roundRect(c, 1242, 132, 300, 13, 7); c.fill();
-    const energy = game.protagonist ? game.protagonist.energy / game.protagonist.maxEnergy : 1;
-    c.fillStyle = energy > .25 ? '#ffc7e4' : '#ff7676'; roundRect(c, 1242, 132, 300 * energy, 13, 7); c.fill();
+    this._currentFloor = game.currentFloor; this._timeLeft = game.progress.timeLeft;
+    c.fillStyle = 'rgba(0,0,0,.5)'; roundRect(c, 20, 20, 190, 58, 10); c.fill();
+    this.outlinedText(c, formatTime(game.progress.timeLeft), 36, 61, 32, '#fff', 'left');
+    c.fillStyle = 'rgba(0,0,0,.5)'; roundRect(c, 1650, 20, 250, 58, 10); c.fill();
+    c.save();
+    const scale = game.scorePopTime > 0 ? 1 + Math.sin((.45 - game.scorePopTime) / .45 * Math.PI) * .16 : 1;
+    c.translate(1775, 50); c.scale(scale, scale);
+    this.outlinedText(c, Number(game.progress.score).toLocaleString('en-US'), 0, 11, 32, '#FFD700', 'center');
+    c.restore();
+    const energy = game.displayEnergy ?? game.protagonist?.energy ?? 100;
+    const energyPct = Math.max(0, Math.min(1, energy / 100));
+    c.fillStyle = '#333333'; c.fillRect(20, 1038, 200, 22);
+    c.fillStyle = energyPct > .5 ? '#4CAF50' : energyPct >= .2 ? '#FFC107' : '#F44336';
+    if (energyPct > 0) c.fillRect(22, 1040, 196 * energyPct, 18);
+    c.strokeStyle = '#fff'; c.lineWidth = 2; c.strokeRect(20, 1038, 200, 22);
+    c.save(); c.font = '600 14px "DM Sans", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 3; c.strokeStyle = '#222';
+    c.strokeText(`Energy: ${Math.round(energy)}/100`, 120, 1049); c.fillStyle = '#fff'; c.fillText(`Energy: ${Math.round(energy)}/100`, 120, 1049); c.restore();
+    this.text(c, `Floor ${game.currentFloor}/${game.totalFloors}`, 1730, 1055, 24, '#fff', 800, 'center');
     this.drawDebug(c, game);
-    this.text(c, 'MAKE A CONNECTION', 1445, 54, 17, '#d9f0d4', 800, 'center');
-    this.text(c, `${Math.ceil(game.progress.timeLeft)}s TO THE BELL`, 1445, 111, 26, '#fff8eb', 900, 'center', 0, 'Nunito');
     this.drawButtons(c, ui.buttons);
     if ('ontouchstart' in window) {
       this.drawTouchPad(c, ui);
     }
-    this.text(c, '←  → MOVE   •   SPACE RUN   •   TAP / DRAG TO WALK   •   DOUBLE-TAP TO RUN   •   ESC PAUSE', 960, 1031, 15, C.muted, 800, 'center');
+    if (game.protagonist.x <= 150 && game.currentFloor > 1) this.text(c, 'Press ▲ / ↑ for the floor above', 370, 997, 16, '#fff', 800, 'left', 0, 'DM Sans');
+    if (game.protagonist.x >= 5610 && game.currentFloor < game.totalFloors) this.text(c, 'Press ▼ / ↓ for the floor below', 1550, 997, 16, '#fff', 800, 'right', 0, 'DM Sans');
+    if (game.floorTransition) {
+      const alpha = game.floorTransition.elapsed < .25 ? game.floorTransition.elapsed / .25 : 1 - (game.floorTransition.elapsed - .25) / .25;
+      c.fillStyle = `rgba(0,0,0,${Math.max(0, Math.min(1, alpha))})`; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    }
   }
   drawDebug(c, game) {
     const player = game.protagonist;
     c.save(); c.globalAlpha = .91; c.fillStyle = 'rgba(48,39,53,.84)'; roundRect(c, 24, 166, 435, 90, 12); c.fill();
     this.text(c, 'PLAYER DEBUG', 42, 190, 14, '#ffd6e7', 900, 'left');
     this.text(c, `ENERGY ${player.energy.toFixed(1)} / 100   •   ${player.state.toUpperCase()}`, 42, 214, 15, '#fff', 700, 'left');
-    this.text(c, `X ${Math.round(player.x)}   Y ${Math.round(player.y)}   •   LEVEL ${game.level}`, 42, 239, 15, '#fff', 700, 'left');
+    this.text(c, `X ${Math.round(player.x)}   Y ${Math.round(player.y)}   •   LEVEL ${game.level}   FLOOR ${game.currentFloor}/${game.totalFloors}`, 42, 239, 15, '#fff', 700, 'left');
     roundRect(c, 1450, 164, 444, 151, 12); c.fill();
     this.text(c, 'STUDENT DEBUG  •  STAR / X / PROGRESS', 1468, 188, 13, '#ffd6e7', 900, 'left');
     game.maleStudents.forEach((student, index) => {
@@ -394,27 +406,43 @@ export class Renderer {
     c.globalAlpha = 1;
   }
   drawGameOver(c, ui) {
-    this.dim(c); this.panel(c, 555, 250, 810, 575, 'THE BELL HAS RUNG');
-    this.text(c, 'That was a day to remember.', 960, 401, 40, C.ink, 900, 'center', 0, 'Nunito');
-    this.text(c, `FINAL SCORE  •  ${ui.score ?? 0} POINTS`, 960, 484, 27, C.pink, 800, 'center');
-    this.text(c, `Rivals defeated  •  ${ui.rivalsDefeated ?? 0}`, 960, 535, 21, C.darkPink, 800, 'center');
-    this.text(c, 'There’s always another school day.', 960, 573, 19, C.muted, 500, 'center');
+    this.dim(c, .8); this.popup(c, 510, 190, 900, 700);
+    const objectives = ui.objectives || {};
+    this.text(c, ui.objectivesMet ? 'Level Complete!' : 'Level Failed!', 960, 280, 36, ui.objectivesMet ? '#4CAF50' : '#F44336', 900, 'center');
+    this.text(c, `Level ${ui.level} Results`, 960, 321, 20, C.muted, 700, 'center');
+    const objectiveRows = [
+      [objectives.actualConquests || 0, objectives.targetConquests || 0, 'Conquer boys'],
+      [objectives.actualScore || 0, objectives.targetScore || 0, 'Reach score'],
+    ];
+    objectiveRows.forEach(([actual, target, label], index) => {
+      const y = 380 + index * 92, met = actual >= target;
+      this.text(c, met ? '✓' : '✗', 620, y, 34, met ? '#4CAF50' : '#F44336', 900, 'center');
+      this.text(c, label, 670, y - 3, 24, C.ink, 800, 'left');
+      this.text(c, `Achieved: ${Number(actual).toLocaleString('en-US')} / ${Number(target).toLocaleString('en-US')}`, 670, y + 29, 18, C.muted, 600, 'left');
+    });
+    this.text(c, `Boys Conquered: ${ui.boysConquered}     Rivals Defeated: ${ui.rivalsDefeated}`, 960, 594, 20, C.ink, 700, 'center');
+    this.text(c, `Final Score: ${Number(ui.score).toLocaleString('en-US')}     Time Remaining: ${formatTime(ui.timeLeft)}`, 960, 634, 20, C.ink, 700, 'center');
     this.drawButtons(c, ui.buttons);
   }
   drawButtons(c, buttons) {
     for (const b of buttons) {
-      const hover = b.id && false;
+      const hover = !b.disabled && this.pointer && this.pointer.x >= b.x && this.pointer.x <= b.x + b.w && this.pointer.y >= b.y && this.pointer.y <= b.y + b.h;
       c.save();
-      c.fillStyle = b.style === 'secondary' ? '#fffdfa' : (b.style === 'quiet' ? 'rgba(255,255,255,.76)' : C.pink);
+      const colors = { secondary: '#fffdfa', quiet: 'rgba(255,255,255,.76)', green: '#4CAF50', blue: '#4A90E2', disabled: '#CCCCCC' };
+      c.fillStyle = colors[b.style] || C.pink;
+      if (hover && ['green', 'blue'].includes(b.style)) c.fillStyle = b.style === 'green' ? '#66BB6A' : '#6AB0F3';
       roundRect(c, b.x, b.y, b.w, b.h, b.radius || Math.min(24, b.h / 2)); c.fill();
-      if (b.style === 'secondary') { c.strokeStyle = '#eadde1'; c.lineWidth = 2; c.stroke(); }
-      c.fillStyle = b.style === 'secondary' || b.style === 'quiet' ? C.ink : '#fff';
+      if (b.style === 'secondary' || b.style === 'blue' || b.style === 'disabled') { c.strokeStyle = b.style === 'blue' ? '#fff' : '#eadde1'; c.lineWidth = b.style === 'blue' ? 2 : 1; c.stroke(); }
+      c.fillStyle = b.disabled ? '#777' : b.style === 'secondary' || b.style === 'quiet' ? C.ink : '#fff';
       c.font = `800 ${b.fontSize || 22}px "DM Sans", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1);
-      if (hover) c.globalAlpha = .9;
       c.restore();
     }
   }
-  dim(c) { c.fillStyle = 'rgba(65,45,60,.18)'; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); }
+  dim(c, opacity = .18) { c.fillStyle = `rgba(0,0,0,${opacity})`; c.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); }
+  outlinedText(c, value, x, y, size, color, align = 'center') {
+    c.save(); c.font = `800 ${size}px "DM Sans", sans-serif`; c.textAlign = align; c.textBaseline = 'alphabetic';
+    c.lineWidth = 5; c.strokeStyle = '#111'; c.strokeText(value, x, y); c.fillStyle = color; c.fillText(value, x, y); c.restore();
+  }
   panel(c, x, y, w, h, eyebrow) {
     c.save(); c.shadowColor = 'rgba(72,45,60,.16)'; c.shadowBlur = 42; c.shadowOffsetY = 15;
     c.fillStyle = '#fffdfa'; roundRect(c, x, y, w, h, 40); c.fill(); c.restore();
@@ -430,3 +458,14 @@ export class Renderer {
 
 function roundRect(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, Math.min(r, h / 2, w / 2)); }
 function floorYToScreen(y) { return 740 + ((y - 200) / 600) * 200; }
+function formatTime(seconds) {
+  const total = Math.max(0, Math.floor(seconds));
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+const FLOOR_PALETTES = [
+  { wall: '#FFD1DC', floorTop: '#f9e6e8', floorMid: '#fff0f1', floorBottom: '#fff8f8' },
+  { wall: '#B5EAD7', floorTop: '#e1f1e7', floorMid: '#eff8ef', floorBottom: '#f7fbf5' },
+  { wall: '#C7CEEA', floorTop: '#e7e9f2', floorMid: '#f1f2f8', floorBottom: '#fafaff' },
+  { wall: '#FFDAC1', floorTop: '#f5e8dc', floorMid: '#fbf2e9', floorBottom: '#fffaf3' },
+  { wall: '#E2F0CB', floorTop: '#eef2df', floorMid: '#f5f8eb', floorBottom: '#fcfdf6' },
+];

@@ -1,11 +1,11 @@
-import { InputManager } from './input.js?v=6';
-import { Renderer } from './renderer.js?v=6';
-import { Camera } from './camera.js?v=6';
-import { MenuState } from './states/menu.js?v=6';
-import { TutorialState } from './states/tutorial.js?v=6';
-import { LevelStartState } from './states/levelStart.js?v=6';
-import { PlayingState } from './states/playing.js?v=6';
-import { GameOverState } from './states/gameOver.js?v=6';
+import { InputManager } from './input.js?v=7';
+import { Renderer } from './renderer.js?v=7';
+import { Camera } from './camera.js?v=7';
+import { MenuState } from './states/menu.js?v=7';
+import { TutorialState } from './states/tutorial.js?v=7';
+import { LevelStartState } from './states/levelStart.js?v=7';
+import { PlayingState } from './states/playing.js?v=7';
+import { GameOverState } from './states/gameOver.js?v=7';
 
 export const GAME_WIDTH = 1920;
 export const GAME_HEIGHT = 1080;
@@ -19,8 +19,16 @@ export class Game {
     this.input = new InputManager(canvas);
     this.camera = new Camera(GAME_WIDTH, GAME_HEIGHT);
     this.settings = { music: true, sfx: true };
-    this.progress = { playerX: 960, score: 0, timeLeft: 60 };
+    this.progress = { playerX: 960, score: 0, timeLeft: 180 };
     this.level = 1;
+    this.currentFloor = 1;
+    this.totalFloors = 3;
+    this.objectives = null;
+    this.floorData = new Map();
+    this.floorTransition = null;
+    this.displayEnergy = 100;
+    this.scorePopTime = 0;
+    this.campaignWon = false;
     this.protagonist = null;
     this.maleStudents = [];
     this.rivals = [];
