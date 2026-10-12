@@ -1,5 +1,5 @@
-import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=9';
-import { levelDefinition } from './levels.js?v=9';
+import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=10';
+import { levelDefinition } from './levels.js?v=10';
 
 const C = { ink: '#342b39', muted: '#786b78', pink: '#e76c91', coral: '#ef8e7e', cream: '#fff7ee', paper: '#fffdfa', lilac: '#a698c9', mint: '#add8c4', sky: '#cce8ed', darkPink: '#bd4c76' };
 

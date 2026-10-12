@@ -1,5 +1,5 @@
-import { BaseState } from './base.js?v=9';
-import { StateId } from '../game.js?v=9';
+import { BaseState } from './base.js?v=10';
+import { StateId } from '../game.js?v=10';
 
 export class GameOverState extends BaseState {
   enter() {

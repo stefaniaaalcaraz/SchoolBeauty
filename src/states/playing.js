@@ -1,9 +1,9 @@
-import { BaseState } from './base.js?v=9';
-import { StateId, GAME_WIDTH } from '../game.js?v=9';
-import { Protagonist } from '../entities/protagonist.js?v=9';
-import { MaleStudent } from '../entities/maleStudent.js?v=9';
-import { FemaleRival } from '../entities/femaleRival.js?v=9';
-import { levelDefinition, createLevelObjectives } from '../levels.js?v=9';
+import { BaseState } from './base.js?v=10';
+import { StateId, GAME_WIDTH } from '../game.js?v=10';
+import { Protagonist } from '../entities/protagonist.js?v=10';
+import { MaleStudent } from '../entities/maleStudent.js?v=10';
+import { FemaleRival } from '../entities/femaleRival.js?v=10';
+import { levelDefinition, createLevelObjectives } from '../levels.js?v=10';
 
 const WORLD_WIDTH = 5760;
 const FLOOR_MIN_Y = 200;
@@ -115,7 +115,7 @@ export class PlayingState extends BaseState {
     }
     let dx = ((input.isDown('ArrowRight', 'd', 'D') ? 1 : 0) - (input.isDown('ArrowLeft', 'a', 'A') ? 1 : 0)) || touchX;
     // Hallways are a side-scrolling lane: vertical arrows are reserved for stair interactions.
-    const dy = 0;
+    let dy = 0;
     if (!dx && !dy && player.moveTarget) {
       const deltaX = player.moveTarget.x - player.x;
       const deltaY = player.moveTarget.y - player.y;
