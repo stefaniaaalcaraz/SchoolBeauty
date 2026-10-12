@@ -9,6 +9,7 @@ export class MaleStudent {
     this.requiredClicks = REQUIRED_CLICKS[starLevel];
     this.clicks = 0;
     this.progress = 0;
+    this.progressVisible = false;
     this.x = x;
     this.y = y;
     this.minX = minX;
@@ -23,6 +24,8 @@ export class MaleStudent {
     this.conquered = false;
     this.followerIndex = -1;
     this.floatingTimer = 0;
+    this.activeClickTimer = 0;
+    this.battle = null;
   }
 
   update(dt) {
@@ -50,6 +53,7 @@ export class MaleStudent {
 
   addClick() {
     if (this.conquered) return false;
+    this.progressVisible = true;
     this.clicks = Math.min(this.requiredClicks, this.clicks + 1);
     this.progress = this.clicks / this.requiredClicks;
     this.floatingTimer = 0.8;
@@ -58,6 +62,23 @@ export class MaleStudent {
       this.mode = 'follow';
     }
     return this.conquered;
+  }
+
+  completeConquest() {
+    this.clicks = this.requiredClicks;
+    this.progress = 1;
+    this.battle = null;
+    this.activeClickTimer = 0;
+    this.conquered = true;
+    this.mode = 'follow';
+  }
+
+  resetConquest() {
+    this.clicks = 0;
+    this.progress = 0;
+    this.progressVisible = false;
+    this.battle = null;
+    this.activeClickTimer = 0;
   }
 
   get color() { return this.conquered ? '#FFC0CB' : STAR_COLORS[this.starLevel]; }

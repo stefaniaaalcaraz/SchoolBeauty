@@ -1,4 +1,4 @@
-import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=5';
+import { GAME_WIDTH, GAME_HEIGHT, StateId } from './game.js?v=6';
 
 const C = { ink: '#342b39', muted: '#786b78', pink: '#e76c91', coral: '#ef8e7e', cream: '#fff7ee', paper: '#fffdfa', lilac: '#a698c9', mint: '#add8c4', sky: '#cce8ed', darkPink: '#bd4c76' };
 
@@ -102,8 +102,16 @@ export class Renderer {
     const c = this.ctx;
     if (game.currentStateId === StateId.PLAYING) {
       const cameraX = game.camera.x;
-      // Students and followers share the middle layer; the protagonist is drawn last.
-      for (const student of game.maleStudents) this.drawStudent(c, student, cameraX, game);
+      // Both student groups share the middle layer and are ordered by floor depth.
+      const actors = [
+        ...game.maleStudents.map((student) => ({ kind: 'student', actor: student })),
+        ...game.rivals.map((rival) => ({ kind: 'rival', actor: rival })),
+      ].sort((a, b) => a.actor.y - b.actor.y);
+      for (const entry of actors) {
+        if (entry.kind === 'student') this.drawStudent(c, entry.actor, cameraX, game);
+        else this.drawRival(c, entry.actor, cameraX);
+      }
+      // The protagonist remains the topmost entity layer.
       this.drawProtagonist(c, game.protagonist, cameraX);
       return;
     }
@@ -136,9 +144,18 @@ export class Renderer {
     c.fillStyle = '#554759'; c.fillRect(screenX - 25, footY - 13, 50, 13);
     if (!student.conquered) {
       this.text(c, '★'.repeat(student.starLevel), screenX, footY - 78, 13, '#8b5071', 900, 'center');
-      c.fillStyle = '#CCCCCC'; c.fillRect(screenX - 50, footY - 96, 100, 10);
-      c.fillStyle = '#4A90E2'; c.fillRect(screenX - 50, footY - 96, 100 * student.progress, 10);
-      c.strokeStyle = '#fff'; c.lineWidth = 1; c.strokeRect(screenX - 50, footY - 96, 100, 10);
+      if (student.progressVisible || student.battle) {
+        const barShake = student.battle ? Math.sin(student.battle.shakeTime * 50) * 2 : 0;
+        if (student.battle) this.text(c, 'BATTLE!', screenX, footY - 110, 16, '#d73754', 900, 'center', 1);
+        const barX = screenX - 50 + barShake;
+        c.fillStyle = '#CCCCCC'; c.fillRect(barX, footY - 96, 100, 10);
+        const playerProgress = student.battle ? student.battle.playerProgress / 100 : student.progress;
+        c.fillStyle = '#4A90E2'; c.fillRect(barX, footY - 96, 100 * playerProgress, 10);
+        if (student.battle) {
+          c.fillStyle = '#E24A4A'; c.fillRect(barX + 100 * (1 - student.battle.rivalProgress / 100), footY - 96, 100 * student.battle.rivalProgress / 100, 10);
+        }
+        c.strokeStyle = '#fff'; c.lineWidth = 1; c.strokeRect(barX, footY - 96, 100, 10);
+      }
     } else {
       this.text(c, '♡', screenX, footY - 79, 20, '#e76c91', 900, 'center');
     }
@@ -161,6 +178,34 @@ export class Renderer {
     c.fillRect(screenX - 30, footY - 80 + bob, 60, 80);
     c.strokeStyle = '#514b68'; c.lineWidth = 3; c.strokeRect(screenX - 30, footY - 80 + bob, 60, 80);
     c.fillStyle = '#fff'; c.beginPath(); c.arc(screenX + player.facing * 12, footY - 58 + bob, 5, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+  drawRival(c, rival, cameraX) {
+    const screenX = rival.x - cameraX;
+    const footY = floorYToScreen(rival.y);
+    const width = rival.level === 5 ? 62 : 50;
+    const height = rival.level === 5 ? 82 : 70;
+    if (screenX < -120 || screenX > GAME_WIDTH + 120) return;
+    c.save();
+    c.globalAlpha = rival.fadeAlpha;
+    c.fillStyle = 'rgba(67,57,70,.2)'; c.beginPath(); c.ellipse(screenX, footY + 4, width * .55, 7, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = rival.isFlashing ? '#fff' : rival.color;
+    c.fillRect(screenX - width / 2, footY - height, width, height);
+    c.strokeStyle = rival.mode === 'battle' ? '#d92f58' : '#6c4057'; c.lineWidth = rival.mode === 'battle' ? 4 : 3;
+    c.strokeRect(screenX - width / 2, footY - height, width, height);
+    c.fillStyle = '#fff3e8'; c.beginPath(); c.arc(screenX + 10, footY - height + 20, 8, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#49394b'; c.beginPath(); c.arc(screenX + 12, footY - height + 20, 2.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#6a2d50'; c.fillRect(screenX - width / 2, footY - 13, width, 13);
+    if (rival.level === 5) {
+      c.fillStyle = '#ffd34f'; c.beginPath();
+      c.moveTo(screenX - 15, footY - height - 3); c.lineTo(screenX - 12, footY - height - 18);
+      c.lineTo(screenX - 3, footY - height - 9); c.lineTo(screenX + 3, footY - height - 20);
+      c.lineTo(screenX + 10, footY - height - 9); c.lineTo(screenX + 15, footY - height - 18);
+      c.lineTo(screenX + 17, footY - height - 3); c.closePath(); c.fill();
+      c.strokeStyle = '#b1832b'; c.lineWidth = 2; c.stroke();
+    } else {
+      this.text(c, `${rival.level}`, screenX, footY - height - 6, 13, '#fff', 900, 'center');
+    }
     c.restore();
   }
   drawCharacter(c, x, y, outfit, heroine) {
@@ -329,6 +374,15 @@ export class Renderer {
       const status = student.mode === 'follow' ? 'FOLLOW' : `${Math.round(student.progress * 100)}%`;
       this.text(c, `${student.starLevel}★   X ${Math.round(student.x)}   ${status}`, 1468, 213 + index * 19, 14, '#fff', 700, 'left');
     });
+    roundRect(c, 24, 267, 435, 137, 12); c.fill();
+    this.text(c, 'RIVAL DEBUG', 42, 291, 14, '#ff9dbd', 900, 'left');
+    this.text(c, `NEXT SPAWN ${game.rivalSpawnTimer.toFixed(1)}s   •   DEFEATED ${game.rivalsDefeated}`, 42, 315, 14, '#fff', 700, 'left');
+    game.rivals.slice(0, 3).forEach((rival, index) => {
+      const battle = rival.mode === 'battle'
+        ? `BATTLE P${Math.round(game.maleStudents.find((student) => student.id === rival.battleTargetId)?.battle?.playerProgress || 0)} / R${Math.round(rival.rivalProgress)}`
+        : rival.mode.toUpperCase();
+      this.text(c, `LV ${rival.level}   ${battle}`, 42, 341 + index * 19, 14, '#fff', 700, 'left');
+    });
     c.restore();
   }
   drawTouchPad(c, ui) {
@@ -343,7 +397,8 @@ export class Renderer {
     this.dim(c); this.panel(c, 555, 250, 810, 575, 'THE BELL HAS RUNG');
     this.text(c, 'That was a day to remember.', 960, 401, 40, C.ink, 900, 'center', 0, 'Nunito');
     this.text(c, `FINAL SCORE  •  ${ui.score ?? 0} POINTS`, 960, 484, 27, C.pink, 800, 'center');
-    this.text(c, 'There’s always another school day.', 960, 540, 20, C.muted, 500, 'center');
+    this.text(c, `Rivals defeated  •  ${ui.rivalsDefeated ?? 0}`, 960, 535, 21, C.darkPink, 800, 'center');
+    this.text(c, 'There’s always another school day.', 960, 573, 19, C.muted, 500, 'center');
     this.drawButtons(c, ui.buttons);
   }
   drawButtons(c, buttons) {

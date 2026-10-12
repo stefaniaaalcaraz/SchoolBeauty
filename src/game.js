@@ -1,11 +1,11 @@
-import { InputManager } from './input.js?v=5';
-import { Renderer } from './renderer.js?v=5';
-import { Camera } from './camera.js?v=5';
-import { MenuState } from './states/menu.js?v=5';
-import { TutorialState } from './states/tutorial.js?v=5';
-import { LevelStartState } from './states/levelStart.js?v=5';
-import { PlayingState } from './states/playing.js?v=5';
-import { GameOverState } from './states/gameOver.js?v=5';
+import { InputManager } from './input.js?v=6';
+import { Renderer } from './renderer.js?v=6';
+import { Camera } from './camera.js?v=6';
+import { MenuState } from './states/menu.js?v=6';
+import { TutorialState } from './states/tutorial.js?v=6';
+import { LevelStartState } from './states/levelStart.js?v=6';
+import { PlayingState } from './states/playing.js?v=6';
+import { GameOverState } from './states/gameOver.js?v=6';
 
 export const GAME_WIDTH = 1920;
 export const GAME_HEIGHT = 1080;
@@ -23,6 +23,9 @@ export class Game {
     this.level = 1;
     this.protagonist = null;
     this.maleStudents = [];
+    this.rivals = [];
+    this.rivalSpawnTimer = 10;
+    this.rivalsDefeated = 0;
     this.states = {
       [StateId.MENU]: new MenuState(this),
       [StateId.TUTORIAL]: new TutorialState(this),

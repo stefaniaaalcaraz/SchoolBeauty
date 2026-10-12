@@ -1,7 +1,8 @@
-import { BaseState } from './base.js?v=5';
-import { StateId } from '../game.js?v=5';
-import { Protagonist } from '../entities/protagonist.js?v=5';
-import { MaleStudent } from '../entities/maleStudent.js?v=5';
+import { BaseState } from './base.js?v=6';
+import { StateId, GAME_WIDTH } from '../game.js?v=6';
+import { Protagonist } from '../entities/protagonist.js?v=6';
+import { MaleStudent } from '../entities/maleStudent.js?v=6';
+import { FemaleRival } from '../entities/femaleRival.js?v=6';
 
 const WORLD_WIDTH = 5760;
 const FLOOR_MIN_Y = 200;
@@ -16,14 +17,21 @@ const LEVEL_STARS = Object.freeze({
 
 export class PlayingState extends BaseState {
   enter() {
-    if (!this.game.resumeRequested) {
+    const resume = this.game.resumeRequested;
+    if (!resume) {
       this.game.progress = { playerX: 960, score: 0, timeLeft: 60 };
       this.game.protagonist = new Protagonist();
       this.game.maleStudents = this.createStudents(this.game.level || 1);
+      this.game.rivals = [];
+      this.game.rivalSpawnTimer = 10;
+      this.spawnInterval = 10;
+      this.game.rivalsDefeated = 0;
+      this.specialGirlfriendsSpawned = new Set();
     }
     this.game.resumeRequested = false;
-    this.game.camera.reset();
     this.game.camera.worldWidth = WORLD_WIDTH;
+    if (resume) this.game.camera.followX(this.game.protagonist.x, WORLD_WIDTH);
+    else this.game.camera.reset();
     this.mobileRunUntilTarget = false;
     this.pointerStartedMove = false;
     this.ui = { buttons: [{ id: 'pause', label: 'Ⅱ', x: 1800, y: 53, w: 66, h: 58, style: 'secondary', fontSize: 22 }] };
@@ -99,7 +107,7 @@ export class PlayingState extends BaseState {
       } else { dx = deltaX; dy = deltaY; }
     }
     const running = input.isDown(' ', 'Shift') || touchRun || this.mobileRunUntilTarget;
-    const currentSpeed = player.update(dt, dx, dy, running);
+    player.update(dt, dx, dy, running);
     if (player.isImmobilized) this.mobileRunUntilTarget = false;
     game.progress.playerX = player.x;
     game.progress.timeLeft = Math.max(0, game.progress.timeLeft - dt);
@@ -122,6 +130,11 @@ export class PlayingState extends BaseState {
       if (nearest && Math.hypot(nearest.x - player.x, nearest.y - player.y) <= 100) this.conquerClick(nearest);
     }
 
+    for (const student of game.maleStudents) {
+      if (student.mode === 'patrol') student.activeClickTimer = Math.max(0, student.activeClickTimer - dt);
+    }
+    this.updateRivals(dt);
+
     if (game.progress.timeLeft <= 0 || game.maleStudents.every((student) => student.conquered)) {
       game.changeState(StateId.GAME_OVER);
     }
@@ -141,15 +154,122 @@ export class PlayingState extends BaseState {
   }
 
   conquerClick(student) {
-    if (!student || student.conquered) return;
-    const justConquered = student.addClick();
+    if (!student || student.conquered || student.mode !== 'patrol') return;
+    student.activeClickTimer = 4;
     this.playClickSound();
-    if (justConquered) {
-      const followers = this.game.maleStudents.filter((entry) => entry.mode === 'follow').length;
-      student.followerIndex = followers;
-      this.game.protagonist.recoverEnergy(25);
-      this.game.progress.score += 100 * student.starLevel;
+    if (student.battle) {
+      student.battle.playerProgress = Math.min(100, student.battle.playerProgress + 5);
+      student.progress = student.battle.playerProgress / 100;
+      student.progressVisible = true;
+      student.floatingTimer = 0.8;
+      if (student.battle.playerProgress >= 100) {
+        const rival = this.game.rivals.find((entry) => entry.id === student.battle.rivalId);
+        this.finishConquest(student, rival ? 1.15 : 1);
+        if (rival) {
+          rival.defeat();
+          this.game.rivalsDefeated += 1;
+        }
+      }
+      return;
     }
+    if (student.addClick()) {
+      this.finishConquest(student);
+    }
+  }
+
+  finishConquest(student, multiplier = 1) {
+    if (!student.conquered) student.completeConquest();
+    const followers = this.game.maleStudents.filter((entry) => entry.mode === 'follow').length;
+    student.followerIndex = followers - 1;
+    this.game.protagonist.recoverEnergy(25);
+    this.game.progress.score += Math.round(100 * student.starLevel * multiplier);
+  }
+
+  updateRivals(dt) {
+    const game = this.game;
+    const cameraX = game.camera.x;
+    const screenRight = cameraX + GAME_WIDTH;
+    const activeMales = game.maleStudents.filter((student) => student.mode === 'patrol');
+    const highStarVisible = activeMales.some((student) => student.starLevel >= 4 && student.x >= cameraX - 25 && student.x <= screenRight + 25);
+    const spawnInterval = highStarVisible ? 10 / 1.5 : 10;
+    if (spawnInterval !== this.spawnInterval) {
+      game.rivalSpawnTimer = this.spawnInterval > 0 ? game.rivalSpawnTimer * spawnInterval / this.spawnInterval : spawnInterval;
+      this.spawnInterval = spawnInterval;
+    }
+
+    // A five-star girlfriend is a one-time special spawn tied to that specific student.
+    for (const student of activeMales) {
+      if (student.starLevel !== 5 || student.x < cameraX - 25 || student.x > screenRight + 25) continue;
+      if (game.rivals.length < 3 && !this.specialGirlfriendsSpawned.has(student.id)) {
+        this.spawnRival(5, student.id);
+        this.specialGirlfriendsSpawned.add(student.id);
+      }
+    }
+
+    if (game.rivals.length < 3) {
+      game.rivalSpawnTimer = Math.max(0, game.rivalSpawnTimer - dt);
+      if (game.rivalSpawnTimer <= 0) {
+        this.spawnRival(this.rollRivalLevel());
+        game.rivalSpawnTimer = spawnInterval;
+      }
+    } else {
+      game.rivalSpawnTimer = Math.min(game.rivalSpawnTimer, spawnInterval);
+    }
+
+    const removeIds = new Set();
+    for (const rival of game.rivals) {
+      if (rival.mode === 'battle') {
+        const student = game.maleStudents.find((entry) => entry.id === rival.battleTargetId);
+        if (!student || !student.battle) {
+          rival.retreat(cameraX);
+          continue;
+        }
+        const battleProgress = rival.advanceBattle(dt);
+        student.battle.rivalProgress = battleProgress;
+        student.battle.shakeTime += dt;
+        if (battleProgress >= 100) {
+          student.resetConquest();
+          rival.retreat(cameraX);
+        }
+        continue;
+      }
+
+      const target = this.findRivalTarget(rival);
+      const result = rival.update(dt, target, cameraX);
+      if (result === 'remove') { removeIds.add(rival.id); continue; }
+      if (result === 'battle' && target && !target.battle && target.progress > 0 && target.progress < 1) {
+        target.battle = { rivalId: rival.id, playerProgress: target.progress * 100, rivalProgress: 0, shakeTime: 0 };
+        rival.beginBattle(target);
+      }
+    }
+    if (removeIds.size) game.rivals = game.rivals.filter((rival) => !removeIds.has(rival.id));
+  }
+
+  findRivalTarget(rival) {
+    const students = this.game.maleStudents.filter((student) => student.mode === 'patrol' && !student.battle && student.progress > 0 && student.progress < 1);
+    if (rival.girlfriendTargetId) {
+      const girlfriendTarget = this.game.maleStudents.find((student) => student.id === rival.girlfriendTargetId && student.mode === 'patrol' && !student.battle);
+      if (girlfriendTarget) return girlfriendTarget;
+    }
+    return students.sort((a, b) => Math.hypot(a.x - rival.x, a.y - rival.y) - Math.hypot(b.x - rival.x, b.y - rival.y))[0] || null;
+  }
+
+  spawnRival(level, girlfriendTargetId = null) {
+    const random = Math.random;
+    const minX = randomBetween(random, 100, 2000);
+    const maxX = randomBetween(random, minX + 500, 5600);
+    const x = randomBetween(random, minX, maxX);
+    const y = randomBetween(random, FLOOR_MIN_Y, FLOOR_MAX_Y);
+    const id = `rival-${Math.random().toString(36).slice(2, 9)}`;
+    this.game.rivals.push(new FemaleRival({ id, level, x, y, minX, maxX, girlfriendTargetId, random }));
+  }
+
+  rollRivalLevel() {
+    const roll = Math.random();
+    if (roll < 0.70) return 1;
+    if (roll < 0.90) return 2;
+    if (roll < 0.98) return 3;
+    return 4;
   }
 
   playClickSound() {

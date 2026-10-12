@@ -1,9 +1,9 @@
-import { BaseState } from './base.js?v=5';
-import { StateId } from '../game.js?v=5';
+import { BaseState } from './base.js?v=6';
+import { StateId } from '../game.js?v=6';
 
 export class GameOverState extends BaseState {
   enter() {
-    this.ui = { score: this.game.progress.score, buttons: [
+    this.ui = { score: this.game.progress.score, rivalsDefeated: this.game.rivalsDefeated || 0, buttons: [
       { id: 'again', label: 'Play again', x: 760, y: 635, w: 250, h: 68 },
       { id: 'menu', label: 'Main menu', x: 1030, y: 635, w: 210, h: 68, style: 'secondary' },
     ] }; super.enter();
